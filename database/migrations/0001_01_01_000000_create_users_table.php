@@ -17,6 +17,13 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+
+            // ▼ ここから追加・変更
+            $table->string('avatar_url')->nullable()->comment('アバター画像URL');
+            $table->string('role')->default('user')->comment('権限: admin/user');
+            $table->boolean('is_active')->default(true)->comment('有効アカウントフラグ');
+            // ▲ ここまで
+            
             $table->rememberToken();
             $table->timestamps();
         });

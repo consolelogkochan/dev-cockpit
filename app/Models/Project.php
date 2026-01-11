@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+class Project extends Model
+{
+    use HasFactory;
+
+    // 一括代入（createメソッド等）を許可するカラム
+    protected $fillable = [
+        'owner_id',
+        'title',
+        'description',
+        'thumbnail_url',
+        'github_repo',
+        'pl_board_id',
+        'figma_file_key',
+        'notion_settings',
+    ];
+
+    // DBのデータ型とPHPの型を自動変換する設定
+    protected $casts = [
+        'notion_settings' => 'array', // JSONを自動でPHP配列に変換
+    ];
+
+    /**
+     * プロジェクトの所有者
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * プロジェクトに参加しているメンバー
+     */
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'project_user')
+                    ->withPivot('role') // 中間テーブルの role も取得
+                    ->withTimestamps();
+    }
+}
