@@ -11,6 +11,8 @@ Route::get('/', function () {
 Route::post('/auth/login', [AuthController::class, 'login']); 
 Route::post('/auth/logout', [AuthController::class, 'logout']);
 
+Route::post('/auth/register', [AuthController::class, 'register']);
+
 // 3. 【重要】キャッチオールルート
 // 上記のAPI以外のあらゆるURL ('/{any}') が来たら、Reactの土台(welcome)を返す
 // これを一番最後に書くのが鉄則です！

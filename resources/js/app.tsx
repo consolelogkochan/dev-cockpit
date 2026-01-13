@@ -5,20 +5,23 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
+import Register from "./pages/RegisterPage";
 import Dashboard from './pages/Dashboard';
+import GuestLayout from './layouts/GuestLayout';
 
 function App() {
     return (
         <BrowserRouter>
             <Routes>
-                {/* ログイン画面 */}
-                <Route path="/login" element={<Login />} />
+                {/* 認証が不要なページ (レイアウト適用) */}
+                <Route element={<GuestLayout />}>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/" element={<Login />} />
+                </Route>
                 
-                {/* ダッシュボード */}
+                {/* ダッシュボード (レイアウトなし・後でAuthLayoutを作成) */}
                 <Route path="/dashboard" element={<Dashboard />} />
-                
-                {/* トップページ */}
-                <Route path="/" element={<Login />} />
             </Routes>
         </BrowserRouter>
     );
