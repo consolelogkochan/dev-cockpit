@@ -1,6 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; // Linkを追加
 import client from '../lib/axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ const Login = () => {
     const [error, setError] = useState('');
     
     const navigate = useNavigate();
+    const { getUser } = useAuth(); // ★追加 2: ContextからgetUser関数をもらう
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -17,6 +19,10 @@ const Login = () => {
         try {
             await client.get('/sanctum/csrf-cookie');
             await client.post('/auth/login', { email, password });
+            
+            // ★追加 3: ログイン成功したら、ユーザー情報を取得してContextを更新する
+            await getUser();
+
             navigate('/dashboard');
         } catch (err: any) {
             if (err.response && err.response.status === 422) {

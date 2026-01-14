@@ -8,21 +8,29 @@ import Login from './pages/Login';
 import Register from "./pages/RegisterPage";
 import Dashboard from './pages/Dashboard';
 import GuestLayout from './layouts/GuestLayout';
+import { AuthProvider } from './contexts/AuthContext';
+import AuthGuard from './components/AuthGuard';
 
 function App() {
     return (
         <BrowserRouter>
-            <Routes>
-                {/* 認証が不要なページ (レイアウト適用) */}
-                <Route element={<GuestLayout />}>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/" element={<Login />} />
-                </Route>
-                
-                {/* ダッシュボード (レイアウトなし・後でAuthLayoutを作成) */}
-                <Route path="/dashboard" element={<Dashboard />} />
-            </Routes>
+            <AuthProvider>
+                <Routes>
+                    {/* 認証が不要なページ (レイアウト適用) */}
+                    <Route element={<GuestLayout />}>
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/" element={<Login />} />
+                    </Route>
+                    
+                    {/* ▼▼▼ ここから先は会員限定エリア (AuthGuardで守る) ▼▼▼ */}
+                    <Route element={<AuthGuard />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        {/* 今後ページが増えたらここに足していく */}
+                    </Route>
+                    {/* ▲▲▲ 会員限定エリア終了 ▲▲▲ */}
+                </Routes>
+            </AuthProvider>
         </BrowserRouter>
     );
 }
