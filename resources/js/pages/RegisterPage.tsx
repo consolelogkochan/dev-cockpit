@@ -26,6 +26,10 @@ const Register = () => {
                 password,
                 password_confirmation: passwordConfirmation
             });
+
+            // ★追加: 登録成功時もフラグを立てる
+            localStorage.setItem('loggedIn', 'true');
+            
             navigate('/dashboard');
         } catch (err: any) {
             if (err.response && err.response.status === 422) {

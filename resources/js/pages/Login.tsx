@@ -19,7 +19,10 @@ const Login = () => {
         try {
             await client.get('/sanctum/csrf-cookie');
             await client.post('/auth/login', { email, password });
-            
+
+            // ★追加: ログイン成功の証（フラグ）をブラウザに残す
+            localStorage.setItem('loggedIn', 'true');
+
             // ★追加 3: ログイン成功したら、ユーザー情報を取得してContextを更新する
             await getUser();
 

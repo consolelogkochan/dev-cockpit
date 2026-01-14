@@ -28,8 +28,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const response = await client.get('/api/user');
             setUser(response.data);
+            // ★追加: データ取得に成功したら、念のためフラグをセット
+            localStorage.setItem('loggedIn', 'true');
         } catch (error) {
             setUser(null); // エラーなら未ログイン状態にする
+            // ★追加: エラー（セッション切れなど）ならフラグを削除
+            localStorage.removeItem('loggedIn');
         } finally {
             setIsLoading(false); // 読み込み完了
         }
@@ -37,12 +41,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // 初回ロード時に一度だけ実行（リロードしてもログイン維持）
     useEffect(() => {
+        // ★修正: フラグがない場合は、サーバーへの問い合わせをスキップする
+        if (!localStorage.getItem('loggedIn')) {
+            setIsLoading(false);
+            return;
+        }
+
         getUser();
     }, []);
 
     // ログイン成功時に手動でユーザーをセットする関数
     const login = (userData: User) => {
         setUser(userData);
+        // ★追加: ログイン成功時にフラグを立てる
+        localStorage.setItem('loggedIn', 'true');
     };
 
     // ログアウト関数
@@ -50,6 +62,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             await client.post('/auth/logout'); // Laravel側のセッション削除
             setUser(null); // React側のユーザー情報削除
+            // ★追加: ログアウト時にフラグを消す
+            localStorage.removeItem('loggedIn');
         } catch (error) {
             console.error('Logout failed', error);
         }
