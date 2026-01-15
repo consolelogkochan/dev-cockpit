@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProjectController;
 
 // ログインしている人だけがアクセスできるエリア
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -14,4 +15,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // 今後、他の認証が必要なAPIはここに追加していきます
     // 例: Route::get('/todos', ...);
+    Route::get('/projects', [ProjectController::class, 'index']);
 });

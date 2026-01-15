@@ -18,4 +18,4 @@ Route::post('/auth/register', [AuthController::class, 'register']);
 // これを一番最後に書くのが鉄則です！
 Route::get('/{any}', function () {
     return view('welcome');
-})->where('any', '.*');
+})->where('any', '.*')->name('login');

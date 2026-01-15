@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import GuestLayout from './layouts/GuestLayout';
 import { AuthProvider } from './contexts/AuthContext';
 import AuthGuard from './components/AuthGuard';
+import AuthenticatedLayout from './layouts/AuthenticatedLayout';
 
 function App() {
     return (
@@ -25,8 +26,11 @@ function App() {
                     
                     {/* ▼▼▼ ここから先は会員限定エリア (AuthGuardで守る) ▼▼▼ */}
                     <Route element={<AuthGuard />}>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        {/* 今後ページが増えたらここに足していく */}
+                        {/* ★ここに AuthenticatedLayout を挟む */}
+                        <Route element={<AuthenticatedLayout />}>
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            {/* 今後ページが増えたらここに足していく */}
+                        </Route>
                     </Route>
                     {/* ▲▲▲ 会員限定エリア終了 ▲▲▲ */}
                 </Routes>
