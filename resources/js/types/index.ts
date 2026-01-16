@@ -17,3 +17,21 @@ export interface Project {
     github_repo: string | null;
     created_at: string;
 }
+
+// Laravelのページネーションレスポンスの型
+export interface PaginatedResponse<T> {
+    data: T[];
+    meta: {
+        current_page: number;
+        last_page: number;
+        from: number;
+        to: number;
+        total: number;
+    };
+    links: {
+        first: string;
+        last: string;
+        prev: string | null;
+        next: string | null;
+    };
+}
