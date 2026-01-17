@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import client from '../lib/axios'; // ★追加: APIクライアント
 
 // フォームの入力データの型定義
 type FormInputs = {
     title: string;
     description: string;
+    thumbnail_url: string;
     github_repo: string;
     pl_board_id: string; // ★追加 (Project-Lite)
     figma_url: string;   // ★追加 (Figma)
@@ -14,9 +16,11 @@ type FormInputs = {
 
 type Props = {
     onCancel: () => void;
+    onSuccess: () => void; // ★追加: 成功時のコールバック
 };
 
-const CreateProjectForm = ({ onCancel }: Props) => {
+const CreateProjectForm = ({ onCancel, onSuccess }: Props) => {
+    const [isSubmitting, setIsSubmitting] = useState(false); // ★追加: 送信中フラグ
     const {
         register,
         control,
@@ -26,6 +30,7 @@ const CreateProjectForm = ({ onCancel }: Props) => {
         defaultValues: {
             title: '',
             description: '',
+            thumbnail_url: '', // ★追加 (初期値は空)
             github_repo: '',
             pl_board_id: '', // ★追加
             figma_url: '',   // ★追加
@@ -38,9 +43,30 @@ const CreateProjectForm = ({ onCancel }: Props) => {
         name: 'notion_pages',
     });
 
-    const onSubmit: SubmitHandler<FormInputs> = (data) => {
-        console.log('入力されたデータ:', data);
-        alert('コンソールに入力データを出力しました！');
+    // ★重要: 送信処理を書き換え
+    const onSubmit: SubmitHandler<FormInputs> = async (data) => {
+        setIsSubmitting(true); // ボタンを無効化
+        try {
+            // 1. APIにデータをPOST送信
+            // 第1引数: URL, 第2引数: 送るデータ
+            await client.post('/api/projects', data);
+
+            // 2. 成功したら親に報告 & モーダルを閉じる
+            alert('プロジェクトを作成しました！');
+            onSuccess(); 
+            onCancel();
+
+        } catch (error: any) {
+            console.error('保存失敗:', error);
+            // バリデーションエラーならアラートを出す簡易実装
+            if (error.response?.status === 422) {
+                alert('入力内容に誤りがあります。');
+            } else {
+                alert('システムエラーが発生しました。');
+            }
+        } finally {
+            setIsSubmitting(false); // ボタンを復活
+        }
     };
 
     return (
@@ -70,6 +96,20 @@ const CreateProjectForm = ({ onCancel }: Props) => {
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border px-3 py-2"
                     placeholder="プロジェクトの概要を入力..."
                 />
+            </div>
+
+            {/* ★追加: サムネイルURL */}
+            <div>
+                <label className="block text-sm font-medium text-gray-700">サムネイル画像 URL</label>
+                <input
+                    type="url" // URL用の入力欄にする
+                    {...register('thumbnail_url')}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border px-3 py-2"
+                    placeholder="https://example.com/image.png (任意)"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                    画像のURLを入力してください。入力がない場合はデフォルト表示になります。
+                </p>
             </div>
 
             {/* 3. 連携ツール URL群 (GitHub, Project-Lite, Figma) */}
@@ -153,15 +193,17 @@ const CreateProjectForm = ({ onCancel }: Props) => {
                 <button
                     type="button"
                     onClick={onCancel}
+                    disabled={isSubmitting} // ★追加: 送信中は押せないように
                     className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
                     キャンセル
                 </button>
                 <button
                     type="submit"
+                    disabled={isSubmitting} // ★追加: 送信中は押せないように
                     className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
-                    作成する
+                    {isSubmitting ? '保存中...' : '作成する'}
                 </button>
             </div>
         </form>

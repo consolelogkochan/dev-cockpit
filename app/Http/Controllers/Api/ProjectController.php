@@ -7,6 +7,9 @@ use App\Models\Project;
 use App\Http\Resources\ProjectResource;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\NotionPage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProjectController extends Controller
 {
@@ -29,5 +32,90 @@ class ProjectController extends Controller
         $projects = $query->paginate(9);
 
         return ProjectResource::collection($projects);
+    }
+
+    /**
+     * GitHubのURLから "user/repo" を抽出する
+     */
+    private function extractGitHubRepo(?string $url): ?string
+    {
+        if (empty($url)) return null;
+
+        // すでに "user/repo" の形式ならそのまま返す
+        if (!str_contains($url, 'github.com')) {
+            return $url; 
+        }
+
+        // 正規表現で抽出
+        // 意味: github.com/ の後ろにある「スラッシュを含まない文字列 / スラッシュを含まない文字列」を探す
+        preg_match('/github\.com\/([^\/]+\/[^\/]+)/', $url, $matches);
+
+        return $matches[1] ?? null;
+    }
+
+    /**
+     * FigmaのURLから "File Key" を抽出する
+     */
+    private function extractFigmaKey(?string $url): ?string
+    {
+        if (empty($url)) return null;
+
+        // https://www.figma.com/file/abc12345/Title... から "abc12345" を抜く
+        preg_match('/figma\.com\/file\/([0-9a-zA-Z]+)/', $url, $matches);
+
+        return $matches[1] ?? null;
+    }
+
+    public function store(Request $request)
+    {
+        // 1. バリデーション (入力チェック)
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            // ★追加: URL形式であることをチェック (空でもOK)
+            'thumbnail_url' => 'nullable|url|max:2048',
+
+            'github_repo' => 'nullable|string',
+            'pl_board_id' => 'nullable|string',
+            'figma_url'   => 'nullable|string',
+            // notion_pages は配列であり、各要素は id キーを持つ必要がある
+            'notion_pages' => 'nullable|array',
+            'notion_pages.*.id' => 'nullable|string',
+        ]);
+
+        // 2. トランザクション開始 (失敗したら全部なかったことにする)
+        return DB::transaction(function () use ($validated, $request) {
+            
+            // プロジェクト作成
+            $project = Project::create([
+                // ログイン中のユーザーIDを入れる (auth()->id())
+                'owner_id' => $request->user()->id, // ※注意: 後で解説
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                // ★追加: そのまま保存
+                'thumbnail_url' => $validated['thumbnail_url'],
+                
+                'pl_board_id' => $validated['pl_board_id'],
+                
+                // さっき作ったメソッドでIDだけ抽出して保存
+                'github_repo' => $this->extractGitHubRepo($validated['github_repo']),
+                'figma_file_key' => $this->extractFigmaKey($validated['figma_url']),
+            ]);
+
+            // Notionページの保存 (配列をループして保存)
+            if (!empty($validated['notion_pages'])) {
+                foreach ($validated['notion_pages'] as $page) {
+                    if (!empty($page['id'])) {
+                        NotionPage::create([
+                            'project_id' => $project->id,
+                            'page_id' => $page['id'],
+                        ]);
+                    }
+                }
+            }
+
+            // 作成したデータをリソース形式で返す
+            return new ProjectResource($project);
+        });
     }
 }

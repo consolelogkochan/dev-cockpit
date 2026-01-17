@@ -16,4 +16,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // 今後、他の認証が必要なAPIはここに追加していきます
     // 例: Route::get('/todos', ...);
     Route::get('/projects', [ProjectController::class, 'index']);
+
+    // ▼ ★追加: 新規保存 (POST)
+    // フロントエンドからの post('/api/projects') はここに着地します
+    Route::post('/projects', [ProjectController::class, 'store']);
 });

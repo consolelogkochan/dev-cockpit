@@ -22,7 +22,7 @@ class ProjectFactory extends Factory
             'pl_board_id' => 'PL-' . $this->faker->numberBetween(1000, 9999),
             
             // サムネイル画像（ダミー画像URL）
-            'thumbnail_url' => 'https://via.placeholder.com/640x480.png/0077cc?text=Project',
+            'thumbnail_url' => null,
         ];
     }
 }

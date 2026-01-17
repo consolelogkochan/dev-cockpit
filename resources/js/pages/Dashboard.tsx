@@ -16,6 +16,10 @@ const Dashboard = () => {
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
+    // ★追加: 再取得のためのトリガー
+    // この数字が変わるたびに useEffect が走るようにするトリックです
+    const [refreshKey, setRefreshKey] = useState(0);
+
     const [isModalOpen, setIsModalOpen] = useState(false); // ★追加
 
     // 検索入力の「間引き」処理 (入力するたびにAPIを叩かないように)
@@ -45,7 +49,7 @@ const Dashboard = () => {
         };
 
         fetchProjects();
-    }, [page, debouncedSearch]); // 👈 依存配列に追加
+    }, [page, debouncedSearch, refreshKey]); // 👈 依存配列に refreshKey を追加
 
     return (
         <div>
@@ -98,7 +102,11 @@ const Dashboard = () => {
                         title="新規プロジェクト作成"
                     >
                         {/* ↓ここにフォームを配置 */}
-                        <CreateProjectForm onCancel={() => setIsModalOpen(false)} />
+                        <CreateProjectForm 
+                            onCancel={() => setIsModalOpen(false)} 
+                            // ★追加: 成功したら refreshKey を更新して再取得を走らせる
+                            onSuccess={() => setRefreshKey(prev => prev + 1)}
+                        />
                     </Modal>
                     
                     {/* ページネーション */}
