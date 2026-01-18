@@ -22,6 +22,9 @@ const Dashboard = () => {
 
     const [isModalOpen, setIsModalOpen] = useState(false); // ★追加
 
+    // ★追加: 編集中のプロジェクトを保持 (nullなら新規作成モード)
+    const [editingProject, setEditingProject] = useState<Project | null>(null);
+
     // 検索入力の「間引き」処理 (入力するたびにAPIを叩かないように)
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -51,6 +54,18 @@ const Dashboard = () => {
         fetchProjects();
     }, [page, debouncedSearch, refreshKey]); // 👈 依存配列に refreshKey を追加
 
+    // 新規作成ボタンが押された時
+    const handleCreate = () => {
+        setEditingProject(null); // 空にする
+        setIsModalOpen(true);
+    };
+
+    // 編集ボタンが押された時
+    const handleEdit = (project: Project) => {
+        setEditingProject(project); // データをセット
+        setIsModalOpen(true);
+    };
+
     return (
         <div>
             {/* ヘッダーエリア */}
@@ -69,7 +84,7 @@ const Dashboard = () => {
                     
                     {/* ★修正: onClickを追加 */}
                     <button
-                        onClick={() => setIsModalOpen(true)} 
+                        onClick={handleCreate}
                         className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition shadow-sm text-sm font-medium whitespace-nowrap"
                     >
                         + 新規作成
@@ -91,7 +106,13 @@ const Dashboard = () => {
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {data.data.map((project) => (
-                            <ProjectCard key={project.id} project={project} />
+                            <ProjectCard 
+                            key={project.id} 
+                            project={project}
+                            // ★追加: 削除されたら refreshKey を更新して再取得
+                            onDelete={() => setRefreshKey(prev => prev + 1)} 
+                            onEdit={handleEdit} // ★追加: 関数を渡す
+                            />
                         ))}
                     </div>
 
@@ -106,6 +127,8 @@ const Dashboard = () => {
                             onCancel={() => setIsModalOpen(false)} 
                             // ★追加: 成功したら refreshKey を更新して再取得を走らせる
                             onSuccess={() => setRefreshKey(prev => prev + 1)}
+                            // ★追加: 編集データを渡す
+                            initialData={editingProject ?? undefined}
                         />
                     </Modal>
                     

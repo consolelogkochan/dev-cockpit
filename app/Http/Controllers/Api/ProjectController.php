@@ -94,7 +94,7 @@ class ProjectController extends Controller
                 'description' => $validated['description'],
                 // ★追加: そのまま保存
                 'thumbnail_url' => $validated['thumbnail_url'],
-                
+
                 'pl_board_id' => $validated['pl_board_id'],
                 
                 // さっき作ったメソッドでIDだけ抽出して保存
@@ -115,6 +115,66 @@ class ProjectController extends Controller
             }
 
             // 作成したデータをリソース形式で返す
+            return new ProjectResource($project);
+        });
+    }
+
+    /**
+     * プロジェクトを削除する
+     */
+    public function destroy(Project $project)
+    {
+        // プロジェクトを削除
+        // (NotionPageはマイグレーションで onDelete('cascade') を設定したので自動で消えます)
+        $project->delete();
+
+        return response()->noContent(); // 204 No Content (成功したけど返すデータはないよ)
+    }
+
+    /**
+     * プロジェクトを更新する
+     */
+    public function update(Request $request, Project $project)
+    {
+        // 1. バリデーション (storeと同じルール)
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'thumbnail_url' => 'nullable|url|max:2048',
+            'github_repo' => 'nullable|string',
+            'pl_board_id' => 'nullable|string',
+            'figma_url'   => 'nullable|string',
+            'notion_pages' => 'nullable|array',
+            'notion_pages.*.id' => 'nullable|string',
+        ]);
+
+        return DB::transaction(function () use ($validated, $project) {
+            // 2. 基本情報の更新
+            $project->update([
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'thumbnail_url' => $validated['thumbnail_url'],
+                'pl_board_id' => $validated['pl_board_id'],
+                'github_repo' => $this->extractGitHubRepo($validated['github_repo']),
+                'figma_file_key' => $this->extractFigmaKey($validated['figma_url']),
+            ]);
+
+            // 3. Notionページの同期 (洗い替え戦略)
+            if (isset($validated['notion_pages'])) {
+                // 一旦、このプロジェクトのNotionページを全削除
+                $project->notionPages()->delete();
+
+                // 新しいリストを作成
+                foreach ($validated['notion_pages'] as $page) {
+                    if (!empty($page['id'])) {
+                        $project->notionPages()->create([
+                            'page_id' => $page['id'],
+                        ]);
+                    }
+                }
+            }
+
+            // 更新されたデータを返す
             return new ProjectResource($project);
         });
     }

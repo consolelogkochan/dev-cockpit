@@ -20,4 +20,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ▼ ★追加: 新規保存 (POST)
     // フロントエンドからの post('/api/projects') はここに着地します
     Route::post('/projects', [ProjectController::class, 'store']);
+
+    // ▼ ★追加: 削除 (DELETE)
+    // /projects/{project} の {project} 部分にIDが入ります
+    Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
+
+    // ▼ ★追加: 更新 (PUT)
+    Route::put('/projects/{project}', [ProjectController::class, 'update']);
 });

@@ -1,13 +1,35 @@
 import React, { useState } from 'react';
 import { Project } from '../types';
+import { CalendarIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import client from '../lib/axios';
 
 type Props = {
     project: Project;
+    onDelete: () => void; // ★追加: 削除完了時のコールバック
+    onEdit: (project: Project) => void; // ★追加
 };
 
-const ProjectCard = ({ project }: Props) => {
+const ProjectCard = ({ project, onDelete, onEdit }: Props) => {
     // 画像の読み込みエラーが発生したかどうかを管理する状態
     const [imageError, setImageError] = useState(false);
+
+    // 削除処理
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.stopPropagation(); // カード自体のクリックイベントを止める（後で詳細画面遷移を作るため）
+        
+        // 簡易的な確認ダイアログ
+        if (!window.confirm(`「${project.title}」を削除しますか？`)) {
+            return;
+        }
+
+        try {
+            await client.delete(`/api/projects/${project.id}`);
+            onDelete(); // 親（Dashboard）に再読み込みを依頼
+        } catch (error) {
+            alert('削除に失敗しました。');
+            console.error(error);
+        }
+    };
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col h-full">
@@ -40,20 +62,44 @@ const ProjectCard = ({ project }: Props) => {
                 </p>
 
                 {/* 3. フッター（日付・バッジ） */}
-                <div className="flex justify-between items-center text-xs text-gray-500 mt-auto pt-3 border-t border-gray-100">
-                    <span>{project.created_at}</span>
-                    
-                    {project.github_repo && (
-                        <a 
-                            href={`https://github.com/${project.github_repo}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded transition"
-                            onClick={(e) => e.stopPropagation()}
+                <div className="mt-4 flex items-center justify-between">
+                    <div className="flex justify-between items-center text-xs text-gray-500 mt-auto pt-3 border-t border-gray-100">
+                        <span>{project.created_at}</span>
+                        
+                        {project.github_repo && (
+                            <a 
+                                href={`https://github.com/${project.github_repo}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded transition"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <span>GitHub</span>
+                            </a>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2"> {/* ボタンを横並びに */}
+                        {/* ★追加: 編集ボタン */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(project);
+                            }}
+                            className="text-gray-400 hover:text-indigo-500 transition-colors p-1"
+                            title="編集"
                         >
-                            <span>GitHub</span>
-                        </a>
-                    )}
+                            <PencilIcon className="h-5 w-5" />
+                        </button>
+                        
+                        {/* ★追加: 削除ボタン (group-hoverでホバー時のみ表示などの演出も可能ですが、まずは常時表示) */}
+                        <button 
+                            onClick={handleDelete}
+                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                            title="削除"
+                        >
+                            <TrashIcon className="h-5 w-5" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

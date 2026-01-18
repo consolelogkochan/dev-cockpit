@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import client from '../lib/axios'; // ★追加: APIクライアント
+import { Project } from '../types';
 
 // フォームの入力データの型定義
 type FormInputs = {
@@ -17,25 +18,34 @@ type FormInputs = {
 type Props = {
     onCancel: () => void;
     onSuccess: () => void; // ★追加: 成功時のコールバック
+    initialData?: Project; // ★追加: これがあれば編集モード
 };
 
-const CreateProjectForm = ({ onCancel, onSuccess }: Props) => {
+const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
     const [isSubmitting, setIsSubmitting] = useState(false); // ★追加: 送信中フラグ
-    const {
-        register,
-        control,
-        handleSubmit,
-        formState: { errors },
-    } = useForm<FormInputs>({
-        defaultValues: {
-            title: '',
-            description: '',
-            thumbnail_url: '', // ★追加 (初期値は空)
-            github_repo: '',
-            pl_board_id: '', // ★追加
-            figma_url: '',   // ★追加
-            notion_pages: [{ id: '' }]
-        }
+    
+    // ★重要: 初期値の計算
+    // 新規なら空、編集なら initialData の値をセット
+    const defaultValues: FormInputs = {
+        title: initialData?.title ?? '',
+        description: initialData?.description ?? '',
+        thumbnail_url: initialData?.thumbnail_url ?? '',
+        // GitHubは "user/repo" 形式で保存されているのでそのまま、なければ空
+        github_repo: initialData?.github_repo ?? '',
+        pl_board_id: initialData?.pl_board_id ?? '',
+        // Figmaは今はKeyだけ保存してるが、フォームはURLを期待しているので
+        // 一旦空にするか、簡易的に復元する（今回は簡易的に空文字 or Keyを表示）
+        // ※完璧にするなら "https://figma.com/file/" + key とする
+        figma_url: initialData?.figma_file_key ? `https://www.figma.com/file/${initialData.figma_file_key}` : '',
+        
+        // Notionページの変換 (DB: page_id -> Form: id)
+        notion_pages: initialData?.notion_pages?.length 
+            ? initialData.notion_pages.map(p => ({ id: p.page_id }))
+            : [{ id: '' }]
+    };
+
+    const { register, control, handleSubmit, formState: { errors } } = useForm<FormInputs>({
+        defaultValues // 計算した初期値をセット
     });
 
     const { fields, append, remove } = useFieldArray({
@@ -43,29 +53,27 @@ const CreateProjectForm = ({ onCancel, onSuccess }: Props) => {
         name: 'notion_pages',
     });
 
-    // ★重要: 送信処理を書き換え
     const onSubmit: SubmitHandler<FormInputs> = async (data) => {
-        setIsSubmitting(true); // ボタンを無効化
+        setIsSubmitting(true);
         try {
-            // 1. APIにデータをPOST送信
-            // 第1引数: URL, 第2引数: 送るデータ
-            await client.post('/api/projects', data);
-
-            // 2. 成功したら親に報告 & モーダルを閉じる
-            alert('プロジェクトを作成しました！');
-            onSuccess(); 
-            onCancel();
-
-        } catch (error: any) {
-            console.error('保存失敗:', error);
-            // バリデーションエラーならアラートを出す簡易実装
-            if (error.response?.status === 422) {
-                alert('入力内容に誤りがあります。');
+            if (initialData) {
+                // ★編集モード: PUT /api/projects/{id}
+                await client.put(`/api/projects/${initialData.id}`, data);
+                alert('プロジェクトを更新しました！');
             } else {
-                alert('システムエラーが発生しました。');
+                // ★新規モード: POST /api/projects
+                await client.post('/api/projects', data);
+                alert('プロジェクトを作成しました！');
             }
+            
+            onSuccess();
+            onCancel();
+        } catch (error: any) {
+            // ... エラー処理 (変更なし)
+            console.error(error);
+            alert('保存に失敗しました。');
         } finally {
-            setIsSubmitting(false); // ボタンを復活
+            setIsSubmitting(false);
         }
     };
 
@@ -203,7 +211,7 @@ const CreateProjectForm = ({ onCancel, onSuccess }: Props) => {
                     disabled={isSubmitting} // ★追加: 送信中は押せないように
                     className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
-                    {isSubmitting ? '保存中...' : '作成する'}
+                    {isSubmitting ? '保存中...' : (initialData ? '更新する' : '作成する')}
                 </button>
             </div>
         </form>

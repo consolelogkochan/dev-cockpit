@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\NotionPage;
 
 class Project extends Model
 {
@@ -22,6 +23,12 @@ class Project extends Model
         'figma_file_key',
         'notion_settings',
     ];
+
+    // ▼ ★追加: Notionページとの1対多リレーション
+    public function notionPages()
+    {
+        return $this->hasMany(NotionPage::class);
+    }
 
     // DBのデータ型とPHPの型を自動変換する設定
     protected $casts = [
