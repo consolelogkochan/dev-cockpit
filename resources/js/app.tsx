@@ -11,6 +11,7 @@ import GuestLayout from './layouts/GuestLayout';
 import { AuthProvider } from './contexts/AuthContext';
 import AuthGuard from './components/AuthGuard';
 import AuthenticatedLayout from './layouts/AuthenticatedLayout';
+import ProjectDetail from './pages/ProjectDetail';
 
 function App() {
     return (
@@ -30,6 +31,9 @@ function App() {
                         <Route element={<AuthenticatedLayout />}>
                             <Route path="/dashboard" element={<Dashboard />} />
                             {/* 今後ページが増えたらここに足していく */}
+
+                            {/* ▼ ★追加: 詳細ページのルート (:id は可変パラメータ) */}
+                            <Route path="/projects/:id" element={<ProjectDetail />} />
                         </Route>
                     </Route>
                     {/* ▲▲▲ 会員限定エリア終了 ▲▲▲ */}

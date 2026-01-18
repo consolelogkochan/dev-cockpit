@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { Project } from '../types';
-import { CalendarIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { 
+    CalendarIcon, 
+    TrashIcon, 
+    PencilIcon, 
+    CommandLineIcon, // GitHub用
+    DocumentTextIcon, // Notion用
+    PhotoIcon,        // Figma用
+    QueueListIcon      
+    } from '@heroicons/react/24/outline';
 import client from '../lib/axios';
+import { useNavigate } from 'react-router-dom'; // ★変更: LinkではなくuseNavigateを使う
+
 
 type Props = {
     project: Project;
@@ -12,9 +22,11 @@ type Props = {
 const ProjectCard = ({ project, onDelete, onEdit }: Props) => {
     // 画像の読み込みエラーが発生したかどうかを管理する状態
     const [imageError, setImageError] = useState(false);
+    const navigate = useNavigate(); // ★追加: ページ遷移用の関数
 
     // 削除処理
     const handleDelete = async (e: React.MouseEvent) => {
+        e.preventDefault();
         e.stopPropagation(); // カード自体のクリックイベントを止める（後で詳細画面遷移を作るため）
         
         // 簡易的な確認ダイアログ
@@ -31,8 +43,22 @@ const ProjectCard = ({ project, onDelete, onEdit }: Props) => {
         }
     };
 
+    // ★追加: カード全体がクリックされた時の処理
+    const handleCardClick = () => {
+        navigate(`/projects/${project.id}`);
+    };
+
+    // 連携状況のチェック
+    const hasGithub = !!project.github_repo;
+    const hasNotion = project.notion_pages && project.notion_pages.length > 0;
+    const hasFigma = !!project.figma_file_key; // または figma_url
+    const hasPL = !!project.pl_board_id;
+
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col h-full">
+        <div
+            onClick={handleCardClick} // ★追加: クリックイベントを設定
+            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col h-full"
+        >
             {/* 1. サムネイル画像エリア */}
             <div className="h-40 bg-gray-200 w-full relative border-b border-gray-100">
                 {/* URLがあり、かつエラーが起きていない場合だけ画像を表示 */}
@@ -49,55 +75,79 @@ const ProjectCard = ({ project, onDelete, onEdit }: Props) => {
                         <span className="text-sm">No Image</span>
                     </div>
                 )}
+
+                {/* ステータスバッジ (固定表示) */}
+                <div className="absolute top-2 right-2 bg-indigo-500 text-white text-xs px-2 py-1 rounded-full shadow opacity-90">
+                    Active
+                </div>
             </div>
 
             {/* 2. 情報エリア */}
-            <div className="p-5 flex-1 flex flex-col">
-                <h3 className="text-lg font-bold text-gray-800 mb-2 leading-tight">
-                    {project.title}
-                </h3>
+            <div className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                        {project.title}
+                    </h3>
+                </div>
                 
-                <p className="text-gray-600 text-sm line-clamp-2 mb-4 flex-1">
-                    {project.description || '説明文がありません'}
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2 h-10">
+                    {project.description || '説明なし'}
                 </p>
 
-                {/* 3. フッター（日付・バッジ） */}
-                <div className="mt-4 flex items-center justify-between">
-                    <div className="flex justify-between items-center text-xs text-gray-500 mt-auto pt-3 border-t border-gray-100">
-                        <span>{project.created_at}</span>
+                {/* フッターエリア */}
+                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                    {/* 左側: 連携ツールのアイコン一覧 */}
+                    <div className="flex items-center gap-2">
+                        {/* GitHub */}
+                        {hasGithub && (
+                            <div title="GitHub連携中" className="text-gray-700 bg-gray-100 p-1 rounded-md">
+                                <CommandLineIcon className="h-4 w-4" />
+                            </div>
+                        )}
+                        {/* Notion */}
+                        {hasNotion && (
+                            <div title="Notion連携中" className="text-gray-700 bg-gray-100 p-1 rounded-md">
+                                <DocumentTextIcon className="h-4 w-4" />
+                            </div>
+                        )}
+                        {/* Figma */}
+                        {hasFigma && (
+                            <div title="Figma連携中" className="text-gray-700 bg-gray-100 p-1 rounded-md">
+                                <PhotoIcon className="h-4 w-4" />
+                            </div>
+                        )}
+                        {/* Project-Lite */}
+                        {hasPL && (
+                            <div title="Project-Lite連携中" className="text-gray-700 bg-gray-100 p-1 rounded-md">
+                                <QueueListIcon className="h-4 w-4" />
+                            </div>
+                        )}
                         
-                        {project.github_repo && (
-                            <a 
-                                href={`https://github.com/${project.github_repo}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded transition"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <span>GitHub</span>
-                            </a>
+                        {/* 連携なしの場合のプレースホルダー */}
+                        {!hasGithub && !hasNotion && !hasFigma && !hasPL && (
+                            <span className="text-xs text-gray-400">未連携</span>
                         )}
                     </div>
-                    <div className="flex items-center gap-2"> {/* ボタンを横並びに */}
-                        {/* ★追加: 編集ボタン */}
+
+                    {/* 右側: 操作ボタン群 (日付は削除してスペース確保) */}
+                    <div className="flex items-center gap-1">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onEdit(project);
                             }}
-                            className="text-gray-400 hover:text-indigo-500 transition-colors p-1"
+                            className="text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors p-1.5 rounded-full"
                             title="編集"
                         >
-                            <PencilIcon className="h-5 w-5" />
+                            <PencilIcon className="h-4 w-4" />
                         </button>
-                        
-                        {/* ★追加: 削除ボタン (group-hoverでホバー時のみ表示などの演出も可能ですが、まずは常時表示) */}
+
                         <button 
                             onClick={handleDelete}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                            className="text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors p-1.5 rounded-full"
                             title="削除"
                         >
-                            <TrashIcon className="h-5 w-5" />
+                            <TrashIcon className="h-4 w-4" />
                         </button>
                     </div>
                 </div>

@@ -178,4 +178,16 @@ class ProjectController extends Controller
             return new ProjectResource($project);
         });
     }
+
+    /**
+     * プロジェクト詳細を取得
+     */
+    public function show(Project $project)
+    {
+        // 紐付いているNotionページ情報も一緒に取得 (Eager Loading)
+        $project->load('notionPages');
+
+        // JSONとして返す
+        return new ProjectResource($project);
+    }
 }
