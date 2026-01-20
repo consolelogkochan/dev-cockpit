@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import client from '../lib/axios'; // ★追加: APIクライアント
@@ -44,7 +44,7 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
             : [{ id: '' }]
     };
 
-    const { register, control, handleSubmit, formState: { errors } } = useForm<FormInputs>({
+    const { register, control, handleSubmit, reset, formState: { errors } } = useForm<FormInputs>({
         defaultValues // 計算した初期値をセット
     });
 
@@ -52,6 +52,38 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
         control,
         name: 'notion_pages',
     });
+
+    // ▼▼▼ 2. この useEffect ブロックを丸ごと追加 ▼▼▼
+    // initialData が変わるたびにフォームの内容を書き換える処理
+    useEffect(() => {
+        if (initialData) {
+            // 編集モード: データをフォームの形式に合わせて流し込む
+            reset({
+                title: initialData.title,
+                description: initialData.description ?? '',
+                thumbnail_url: initialData.thumbnail_url ?? '',
+                github_repo: initialData.github_repo ?? '',
+                pl_board_id: initialData.pl_board_id ?? '',
+                figma_url: initialData.figma_file_key ? `https://www.figma.com/file/${initialData.figma_file_key}` : '',
+                // Notionページの変換 (重要)
+                notion_pages: initialData.notion_pages && initialData.notion_pages.length > 0
+                    ? initialData.notion_pages.map(p => ({ id: p.page_id }))
+                    : [{ id: '' }]
+            });
+        } else {
+            // 新規作成モード: フォームを空にする
+            reset({
+                title: '',
+                description: '',
+                thumbnail_url: '',
+                github_repo: '',
+                pl_board_id: '',
+                figma_url: '',
+                notion_pages: [{ id: '' }]
+            });
+        }
+    }, [initialData, reset]);
+    // ▲▲▲ 追加ここまで ▲▲▲
 
     const onSubmit: SubmitHandler<FormInputs> = async (data) => {
         setIsSubmitting(true);

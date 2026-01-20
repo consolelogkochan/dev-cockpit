@@ -27,6 +27,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ▼ ★追加: GitHub情報取得用
     Route::get('/projects/{project}/github', [ProjectController::class, 'getGithubInfo']);
 
+    // ▼ ★追加: Notion情報取得用
+    Route::get('/projects/{project}/notion', [ProjectController::class, 'getNotionInfo']);
+
     // ▼ ★追加: 削除 (DELETE)
     // /projects/{project} の {project} 部分にIDが入ります
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);

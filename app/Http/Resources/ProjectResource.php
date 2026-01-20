@@ -15,12 +15,17 @@ class ProjectResource extends JsonResource
             'description' => $this->description,
             'thumbnail_url' => $this->thumbnail_url,
             'github_repo' => $this->github_repo,
+            'pl_board_id' => $this->pl_board_id,
+            'figma_file_key' => $this->figma_file_key,
+            
+            // ▼▼▼ ★追加: これがないとフロントエンドに届きません ▼▼▼
+            'notion_pages' => $this->notionPages, 
+            // ▲▲▲ 追加ここまで ▲▲▲
             
             // 日付フォーマット
             'created_at' => $this->created_at->format('Y-m-d'),
+            'updated_at' => $this->updated_at->format('Y-m-d'),
             
-            // ↓ 存在しないカラムは削除しました
-            // status, priority, due_date
         ];
     }
 }

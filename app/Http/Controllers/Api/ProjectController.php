@@ -30,7 +30,9 @@ class ProjectController extends Controller
 
         // 1ページあたり9件取得 (3列×3行で表示がいいため)
         // paginate() を使うと、自動的に meta (ページ数情報) が付与されます
-        $projects = $query->paginate(9);
+        $projects = Project::with('notionPages')
+            ->orderBy('created_at', 'desc')
+            ->paginate(9);
 
         return ProjectResource::collection($projects);
     }
@@ -225,5 +227,54 @@ class ProjectController extends Controller
             'repo' => $repoResponse->json(),       // リポジトリの基本情報 (Star数など)
             'commits' => $commitsResponse->json() // コミット履歴
         ]);
+    }
+
+    /**
+     * NotionAPIからページ情報を取得する
+     */
+    public function getNotionInfo(Project $project)
+    {
+        // 1. 紐付いているNotionページIDを取得
+        $project->load('notionPages');
+        
+        if ($project->notionPages->isEmpty()) {
+            return response()->json(['pages' => []]);
+        }
+
+        $token = env('NOTION_API_TOKEN');
+        $version = env('NOTION_VERSION', '2022-06-28');
+        $results = [];
+
+        // 2. 各ページについてNotion APIを叩く
+        foreach ($project->notionPages as $page) {
+            // ページ詳細取得API: https://api.notion.com/v1/pages/{page_id}
+            $response = Http::withToken($token)
+                ->withHeaders(['Notion-Version' => $version])
+                ->get("https://api.notion.com/v1/pages/{$page->page_id}");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                // 成功したらリストに追加
+                $results[] = [
+                    'id' => $data['id'],
+                    'url' => $data['url'],
+                    'icon' => $data['icon'] ?? null,
+                    'cover' => $data['cover'] ?? null,
+                    'last_edited_time' => $data['last_edited_time'],
+                    // タイトルなどの詳細は 'properties' の中にある（構造が深いのでそのまま渡す）
+                    'properties' => $data['properties'] ?? [],
+                ];
+            } else {
+                // 失敗（権限がない、消されたなど）
+                $results[] = [
+                    'id' => $page->page_id,
+                    'error' => 'Access denied or Not found',
+                    'status' => $response->status(),
+                ];
+            }
+        }
+
+        return response()->json(['pages' => $results]);
     }
 }

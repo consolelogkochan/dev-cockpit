@@ -11,6 +11,7 @@ import {
 import client from '../lib/axios';
 import { Project } from '../types';
 import GithubWidget from '../components/GithubWidget'; // ★追加
+import NotionWidget from '../components/NotionWidget'; // ★追加
 
 const ProjectDetail = () => {
     const { id } = useParams();
@@ -144,20 +145,11 @@ const ProjectDetail = () => {
                             <DocumentTextIcon className="h-5 w-5 mr-2 text-gray-700" />
                             Notion Pages
                         </h3>
-                        {project.notion_pages && project.notion_pages.length > 0 ? (
-                            <ul className="space-y-2 overflow-y-auto max-h-48">
-                                {project.notion_pages.map((page) => (
-                                    <li key={page.id} className="p-2 bg-gray-50 rounded border border-gray-100 hover:bg-gray-100 transition text-sm">
-                                        <div className="font-medium text-gray-700">Page Title</div>
-                                        <div className="text-xs text-gray-400 truncate">ID: {page.page_id}</div>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50 rounded border border-dashed">
-                                設定なし
-                            </div>
-                        )}
+                        {/* ▼ ここを書き換え: Widgetを配置 */}
+                        <div className="flex-1 min-h-0">
+                             <NotionWidget projectId={Number(id)} />
+                        </div>
+                        {/* ▲ 書き換えここまで */}
                     </div>
 
                     {/* News (右下) */}
