@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\NotionPage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class ProjectController extends Controller
 {
@@ -189,5 +190,40 @@ class ProjectController extends Controller
 
         // JSONとして返す
         return new ProjectResource($project);
+    }
+
+    /**
+     * GitHubからリポジトリ情報を取得する
+     */
+    public function getGithubInfo(Project $project)
+    {
+        // 1. GitHubリポジトリが登録されていない場合はエラー
+        if (empty($project->github_repo)) {
+            return response()->json(['message' => 'GitHub repository not linked'], 404);
+        }
+
+        // 2. 環境変数からトークンを取得
+        $token = env('GITHUB_TOKEN');
+
+        // 3. GitHub APIを叩く (リポジトリ情報の取得)
+        // URL例: https://api.github.com/repos/laravel/laravel
+        $repoResponse = Http::withToken($token)->get("https://api.github.com/repos/{$project->github_repo}");
+
+        // 4. GitHub APIを叩く (コミット履歴の取得 - 最新5件)
+        // URL例: https://api.github.com/repos/laravel/laravel/commits
+        $commitsResponse = Http::withToken($token)->get("https://api.github.com/repos/{$project->github_repo}/commits", [
+            'per_page' => 5, // 最新5件だけ取得
+        ]);
+
+        // 5. エラーハンドリング (リポジトリが見つからない場合など)
+        if ($repoResponse->failed()) {
+            return response()->json(['message' => 'GitHub repository not found'], 404);
+        }
+
+        // 6. 必要なデータだけを整形して返す
+        return response()->json([
+            'repo' => $repoResponse->json(),       // リポジトリの基本情報 (Star数など)
+            'commits' => $commitsResponse->json() // コミット履歴
+        ]);
     }
 }

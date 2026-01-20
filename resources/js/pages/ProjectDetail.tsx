@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import client from '../lib/axios';
 import { Project } from '../types';
+import GithubWidget from '../components/GithubWidget'; // ★追加
 
 const ProjectDetail = () => {
     const { id } = useParams();
@@ -110,29 +111,16 @@ const ProjectDetail = () => {
                             <CommandLineIcon className="h-5 w-5 mr-2 text-gray-700" />
                             GitHub
                         </h3>
+                        {/* ▼ ここを書き換え */}
                         {project.github_repo ? (
-                            <div className="flex flex-col h-full justify-between">
-                                <div>
-                                    <p className="text-xs text-gray-500 mb-1">Repository</p>
-                                    <a 
-                                        href={`https://github.com/${project.github_repo}`} 
-                                        target="_blank" 
-                                        rel="noreferrer" 
-                                        className="text-indigo-600 font-mono break-all hover:underline text-lg"
-                                    >
-                                        {project.github_repo}
-                                    </a>
-                                </div>
-                                <div className="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-500">
-                                    <p>Last commit: <span className="font-mono">2 hours ago</span></p>
-                                    <p>Open Issues: <span className="font-mono">3</span></p>
-                                </div>
-                            </div>
+                            // project.id と github_repo を渡すだけでOK！
+                            <GithubWidget projectId={project.id} repoName={project.github_repo} />
                         ) : (
                             <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50 rounded border border-dashed">
                                 未連携
                             </div>
                         )}
+                        {/* ▲ 書き換えここまで */}
                     </div>
 
                     {/* ------------------------------------------------
