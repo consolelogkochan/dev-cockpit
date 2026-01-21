@@ -52,4 +52,19 @@ class Project extends Model
                     ->withPivot('role') // 中間テーブルの role も取得
                     ->withTimestamps();
     }
+
+    /**
+     * FigmaのURLからFile Keyを自動抽出して保存する
+     */
+    public function setFigmaFileKeyAttribute($value)
+    {
+        /// 修正前: '/\/file\/([a-zA-Z0-9]+)/'
+        // 修正後: 'file' または 'design' のどちらがきてもOKにする
+        if (preg_match('/\/(?:file|design)\/([a-zA-Z0-9]+)/', $value, $matches)) {
+            $this->attributes['figma_file_key'] = $matches[1];
+        } else {
+            // マッチしなければそのまま（あるいはKeyが直接入力された場合）
+            $this->attributes['figma_file_key'] = $value;
+        }
+    }
 }

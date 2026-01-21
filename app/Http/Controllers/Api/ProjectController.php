@@ -63,8 +63,9 @@ class ProjectController extends Controller
     {
         if (empty($url)) return null;
 
-        // https://www.figma.com/file/abc12345/Title... から "abc12345" を抜く
-        preg_match('/figma\.com\/file\/([0-9a-zA-Z]+)/', $url, $matches);
+        // 修正前: '/figma\.com\/file\/([0-9a-zA-Z]+)/'
+        // ▼▼▼ 修正後: 'file' または 'design' に対応させる ▼▼▼
+        preg_match('/figma\.com\/(?:file|design)\/([0-9a-zA-Z]+)/', $url, $matches);
 
         return $matches[1] ?? null;
     }
@@ -80,7 +81,7 @@ class ProjectController extends Controller
 
             'github_repo' => 'nullable|string',
             'pl_board_id' => 'nullable|string',
-            'figma_url'   => 'nullable|string',
+            'figma_file_key' => 'nullable|string',
             // notion_pages は配列であり、各要素は id キーを持つ必要がある
             'notion_pages' => 'nullable|array',
             'notion_pages.*.id' => 'nullable|string',
@@ -102,7 +103,7 @@ class ProjectController extends Controller
                 
                 // さっき作ったメソッドでIDだけ抽出して保存
                 'github_repo' => $this->extractGitHubRepo($validated['github_repo']),
-                'figma_file_key' => $this->extractFigmaKey($validated['figma_url']),
+                'figma_file_key' => $this->extractFigmaKey($validated['figma_file_key']),
             ]);
 
             // Notionページの保存 (配列をループして保存)
@@ -146,7 +147,7 @@ class ProjectController extends Controller
             'thumbnail_url' => 'nullable|url|max:2048',
             'github_repo' => 'nullable|string',
             'pl_board_id' => 'nullable|string',
-            'figma_url'   => 'nullable|string',
+            'figma_file_key' => 'nullable|string',
             'notion_pages' => 'nullable|array',
             'notion_pages.*.id' => 'nullable|string',
         ]);
@@ -159,7 +160,7 @@ class ProjectController extends Controller
                 'thumbnail_url' => $validated['thumbnail_url'],
                 'pl_board_id' => $validated['pl_board_id'],
                 'github_repo' => $this->extractGitHubRepo($validated['github_repo']),
-                'figma_file_key' => $this->extractFigmaKey($validated['figma_url']),
+                'figma_file_key' => $this->extractFigmaKey($validated['figma_file_key']),
             ]);
 
             // 3. Notionページの同期 (洗い替え戦略)
@@ -276,5 +277,57 @@ class ProjectController extends Controller
         }
 
         return response()->json(['pages' => $results]);
+    }
+
+    /**
+     * ZennのRSSフィードを取得してパースする
+     */
+    public function getNews()
+    {
+        // ZennのテックトレンドのRSS
+        $rssUrl = 'https://zenn.dev/feed';
+
+        try {
+            // 1. RSSデータを取得 (XML形式の文字列)
+            $response = Http::get($rssUrl);
+            
+            if ($response->failed()) {
+                return response()->json(['error' => 'Failed to fetch RSS'], 500);
+            }
+
+            // 2. XML文字列をPHPのオブジェクトに変換
+            $xml = simplexml_load_string($response->body());
+            
+            // 3. JSONに変換して返すためにデータを整形
+            $articles = [];
+            
+            // 記事は <item> タグの中にある (上位5件だけ取得)
+            $count = 0;
+            foreach ($xml->channel->item as $item) {
+                if ($count >= 5) break;
+
+                // 名前空間 (dc:creator や media:content など) を扱うための準備
+                $namespaces = $item->getNameSpaces(true);
+                $dc = $item->children($namespaces['dc'] ?? null);
+                
+                // 画像URLの取得トライ (RSSの構造によるので簡易的に)
+                $imageUrl = (string)$item->enclosure['url'] ?? null;
+
+                $articles[] = [
+                    'title' => (string)$item->title,
+                    'link' => (string)$item->link,
+                    'pubDate' => date('Y-m-d', strtotime((string)$item->pubDate)),
+                    'creator' => $dc ? (string)$dc->creator : '',
+                    'thumbnail' => $imageUrl,
+                ];
+                $count++;
+            }
+
+            return response()->json(['articles' => $articles]);
+
+        } catch (\Exception $e) {
+            // パースエラーなど
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

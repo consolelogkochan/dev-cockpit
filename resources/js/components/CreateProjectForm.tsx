@@ -11,7 +11,7 @@ type FormInputs = {
     thumbnail_url: string;
     github_repo: string;
     pl_board_id: string; // ★追加 (Project-Lite)
-    figma_url: string;   // ★追加 (Figma)
+    figma_file_key: string;   // ★追加 (Figma)
     notion_pages: { id: string }[];
 };
 
@@ -36,7 +36,7 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
         // Figmaは今はKeyだけ保存してるが、フォームはURLを期待しているので
         // 一旦空にするか、簡易的に復元する（今回は簡易的に空文字 or Keyを表示）
         // ※完璧にするなら "https://figma.com/file/" + key とする
-        figma_url: initialData?.figma_file_key ? `https://www.figma.com/file/${initialData.figma_file_key}` : '',
+        figma_file_key: initialData?.figma_file_key ? `https://www.figma.com/file/${initialData.figma_file_key}` : '',
         
         // Notionページの変換 (DB: page_id -> Form: id)
         notion_pages: initialData?.notion_pages?.length 
@@ -64,7 +64,7 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
                 thumbnail_url: initialData.thumbnail_url ?? '',
                 github_repo: initialData.github_repo ?? '',
                 pl_board_id: initialData.pl_board_id ?? '',
-                figma_url: initialData.figma_file_key ? `https://www.figma.com/file/${initialData.figma_file_key}` : '',
+                figma_file_key: initialData.figma_file_key ? `https://www.figma.com/file/${initialData.figma_file_key}` : '',
                 // Notionページの変換 (重要)
                 notion_pages: initialData.notion_pages && initialData.notion_pages.length > 0
                     ? initialData.notion_pages.map(p => ({ id: p.page_id }))
@@ -78,7 +78,7 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
                 thumbnail_url: '',
                 github_repo: '',
                 pl_board_id: '',
-                figma_url: '',
+                figma_file_key: '',
                 notion_pages: [{ id: '' }]
             });
         }
@@ -186,7 +186,7 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
                     <label className="block text-sm font-medium text-gray-700">Figma URL</label>
                     <input
                         type="text"
-                        {...register('figma_url')}
+                        {...register('figma_file_key')}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border px-3 py-2"
                         placeholder="https://www.figma.com/file/..."
                     />
