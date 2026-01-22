@@ -1,0 +1,191 @@
+import React, { useEffect, useState } from 'react';
+import { 
+    CheckCircleIcon, 
+    ExclamationCircleIcon, 
+    ClockIcon, 
+    CalendarIcon,
+    ArrowTopRightOnSquareIcon 
+} from '@heroicons/react/24/outline';
+import client from '../lib/axios';
+
+type Task = {
+    id: number;
+    title: string;
+    end_date: string;
+    is_completed: boolean;
+};
+
+type SummaryData = {
+    board_title: string;
+    progress: {
+        total: number;
+        completed: number;
+        rate: number;
+        overdue_count: number;
+    };
+    tasks: {
+        today: Task[];
+        week: Task[];
+    };
+};
+
+type Props = {
+    projectId: number;
+    plBoardId: string | number; // ★追加: Project-LiteのボードIDを受け取る
+};
+
+// ★ Project-Liteの本番URL (環境に合わせて変更してください)
+const PL_BASE_URL = 'https://project-lite.ikshowcase.site';
+
+const ProjectLiteWidget = ({ projectId, plBoardId }: Props) => {
+    const [data, setData] = useState<SummaryData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Proxy APIを叩く
+                const response = await client.get(`/api/projects/${projectId}/project-lite`);
+                setData(response.data);
+            } catch (e) {
+                console.error(e);
+                setError(true);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [projectId]);
+
+    if (loading) return <div className="h-full flex items-center justify-center text-xs text-gray-400">Loading Tasks...</div>;
+    
+    // 連携されていない、またはエラーの場合
+    if (error || !data) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded border border-dashed p-4">
+                <p className="text-xs mb-1">Project-Lite連携情報がありません</p>
+                <p className="text-[10px] text-gray-300">編集画面でBoard IDを設定してください</p>
+            </div>
+        );
+    }
+
+    const { progress, tasks } = data;
+    
+    // 円グラフ用の計算
+    const radius = 40;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - (progress.rate / 100) * circumference;
+
+    const getStrokeColor = () => {
+        if (progress.rate === 100) return "text-green-500";
+        if (progress.overdue_count > 0) return "text-red-500";
+        return "text-indigo-500";
+    };
+
+    return (
+        <div className="flex h-full min-h-62.5 relative">
+
+            {/* ★★★ 修正: 右上の外部リンクボタン (テキスト付き) ★★★ */}
+            <a 
+                href={`${PL_BASE_URL}/boards/${plBoardId}`}
+                target="_blank" 
+                rel="noopener noreferrer"
+                // z-10 で手前に表示、flex で横並び、cursor-pointer で指マーク
+                className="absolute top-0 right-0 flex items-center gap-1 p-2 text-xs text-indigo-500 hover:text-indigo-700 hover:underline z-10 cursor-pointer bg-white/80 rounded-bl-lg backdrop-blur-sm"
+                title="Open in Project-Lite"
+            >
+                <span>Open in Project-Lite</span>
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+            </a>
+
+            {/* --- 左側: タスクリスト (60%) --- */}
+            <div className="w-3/5 pr-4 border-r border-gray-100 flex flex-col">
+                <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+                    
+                    {/* 今日のタスク */}
+                    <div>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center">
+                            <ExclamationCircleIcon className="h-3 w-3 mr-1 text-orange-500" />
+                            Today & Overdue
+                        </h4>
+                        {progress.overdue_count > 0 && (
+                             <div className="mb-2 px-3 py-2 bg-red-50 text-red-700 rounded text-xs border border-red-100 flex items-center">
+                                <ExclamationCircleIcon className="h-4 w-4 mr-2 shrink-0" />
+                                <span>{progress.overdue_count} 件の期限切れタスクがあります</span>
+                             </div>
+                        )}
+                        
+                        {tasks.today.length === 0 && progress.overdue_count === 0 ? (
+                            <p className="text-xs text-gray-400 pl-1">今日のタスクはありません</p>
+                        ) : (
+                            <ul className="space-y-2">
+                                {tasks.today.map(task => (
+                                    <TaskItem key={task.id} task={task} isToday={true} />
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    {/* 今週のタスク */}
+                    <div>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center">
+                            <CalendarIcon className="h-3 w-3 mr-1 text-blue-500" />
+                            Upcoming (This Week)
+                        </h4>
+                        {tasks.week.length === 0 ? (
+                            <p className="text-xs text-gray-400 pl-1">今週の予定はありません</p>
+                        ) : (
+                            <ul className="space-y-2">
+                                {tasks.week.map(task => (
+                                    <TaskItem key={task.id} task={task} />
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* --- 右側: 進捗グラフ (40%) --- */}
+            <div className="w-2/5 flex flex-col items-center justify-center pl-4 relative">
+                <div className="relative">
+                    <svg className="transform -rotate-90 w-32 h-32">
+                        <circle cx="64" cy="64" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
+                        <circle cx="64" cy="64" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className={`${getStrokeColor()} transition-all duration-1000 ease-out`} />
+                    </svg>
+                    <div className="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center">
+                        <span className="text-2xl font-bold text-gray-700">{progress.rate}<span className="text-sm">%</span></span>
+                        <span className="text-[10px] text-gray-400">Completed</span>
+                    </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-4 text-center w-full">
+                    <div>
+                        <div className="text-lg font-semibold text-gray-700">{progress.total - progress.completed}</div>
+                        <div className="text-[10px] text-gray-400 uppercase">Remaining</div>
+                    </div>
+                    <div>
+                        <div className="text-lg font-semibold text-gray-700">{progress.total}</div>
+                        <div className="text-[10px] text-gray-400 uppercase">Total</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const TaskItem = ({ task, isToday = false }: { task: Task, isToday?: boolean }) => {
+    return (
+        <li className={`flex items-start p-2 rounded border transition-shadow ${isToday ? 'bg-orange-50 border-orange-100' : 'bg-white border-gray-100 hover:shadow-sm'}`}>
+            <div className={`mt-0.5 w-2 h-2 rounded-full mr-2 shrink-0 ${isToday ? 'bg-orange-400' : 'bg-blue-300'}`}></div>
+            <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-gray-700 truncate">{task.title}</p>
+                <div className="flex items-center mt-1 text-[10px] text-gray-400">
+                    <ClockIcon className="h-3 w-3 mr-1" />
+                    {new Date(task.end_date).toLocaleDateString()}
+                </div>
+            </div>
+        </li>
+    );
+};
+
+export default ProjectLiteWidget;

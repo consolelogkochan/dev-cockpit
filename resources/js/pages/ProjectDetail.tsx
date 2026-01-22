@@ -14,6 +14,7 @@ import GithubWidget from '../components/GithubWidget';
 import NotionWidget from '../components/NotionWidget';
 import FigmaWidget from '../components/FigmaWidget';
 import NewsWidget from '../components/NewsWidget'; // ★追加
+import ProjectLiteWidget from '../components/ProjectLiteWidget';
 
 const ProjectDetail = () => {
     const { id } = useParams();
@@ -97,9 +98,19 @@ const ProjectDetail = () => {
                             <QueueListIcon className="h-5 w-5 mr-2 text-indigo-500" />
                             Project-Lite
                         </h3>
-                        <div className="flex-1 bg-gray-50 rounded-md border border-dashed border-gray-300 flex items-center justify-center text-gray-400">
-                            <p>カンバンボード表示エリア (実装予定)</p>
+                        <div className="flex-1">
+                            {project.pl_board_id ? (
+                                <ProjectLiteWidget 
+                                projectId={project.id} 
+                                plBoardId={project.pl_board_id}
+                                />
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-gray-400 bg-gray-50 rounded border border-dashed">
+                                    <p>Project-Lite連携未設定</p>
+                                </div>
+                            )}
                         </div>
+                        
                         {project.pl_board_id && (
                             <p className="text-xs text-gray-400 mt-2 text-right">Board ID: {project.pl_board_id}</p>
                         )}

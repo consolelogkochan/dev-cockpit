@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, QueueListIcon } from '@heroicons/react/24/outline';
 import client from '../lib/axios'; // ★追加: APIクライアント
 import { Project } from '../types';
 
@@ -172,13 +172,23 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
 
                 {/* ★追加: Project-Lite */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Project-Lite ボードID (またはURL)</label>
-                    <input
-                        type="text"
-                        {...register('pl_board_id')}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border px-3 py-2"
-                        placeholder="例: PL-1234 (URLでも可)"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project-Lite Board URL or ID
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <QueueListIcon className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            {...register('pl_board_id')}
+                            className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border py-2"
+                            placeholder="Example: https://.../boards/5"
+                        />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                        ボードのURLを貼り付けると、自動的にID (例: 5) が抽出されます。
+                    </p>
                 </div>
 
                 {/* ★追加: Figma */}

@@ -87,6 +87,14 @@ class ProjectController extends Controller
             'notion_pages.*.id' => 'nullable|string',
         ]);
 
+        // ▼▼▼ 追加: IDの抽出処理 ▼▼▼
+        if ($request->has('pl_board_id')) {
+            $request->merge([
+                'pl_board_id' => $this->extractBoardId($request->pl_board_id)
+            ]);
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
+
         // 2. トランザクション開始 (失敗したら全部なかったことにする)
         return DB::transaction(function () use ($validated, $request) {
             
@@ -99,7 +107,8 @@ class ProjectController extends Controller
                 // ★追加: そのまま保存
                 'thumbnail_url' => $validated['thumbnail_url'],
 
-                'pl_board_id' => $validated['pl_board_id'],
+                // ★修正: $validated ではなく、$request から取得する
+                'pl_board_id' => $request->pl_board_id,
                 
                 // さっき作ったメソッドでIDだけ抽出して保存
                 'github_repo' => $this->extractGitHubRepo($validated['github_repo']),
@@ -152,13 +161,22 @@ class ProjectController extends Controller
             'notion_pages.*.id' => 'nullable|string',
         ]);
 
-        return DB::transaction(function () use ($validated, $project) {
+        // ▼▼▼ 追加: IDの抽出処理 ▼▼▼
+        if ($request->has('pl_board_id')) {
+            $request->merge([
+                'pl_board_id' => $this->extractBoardId($request->pl_board_id)
+            ]);
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
+
+        return DB::transaction(function () use ($validated, $project, $request) {
             // 2. 基本情報の更新
             $project->update([
                 'title' => $validated['title'],
                 'description' => $validated['description'],
                 'thumbnail_url' => $validated['thumbnail_url'],
-                'pl_board_id' => $validated['pl_board_id'],
+                // ★修正: ここも $request を使う
+                'pl_board_id' => $request->pl_board_id,
                 'github_repo' => $this->extractGitHubRepo($validated['github_repo']),
                 'figma_file_key' => $this->extractFigmaKey($validated['figma_file_key']),
             ]);
@@ -329,5 +347,22 @@ class ProjectController extends Controller
             // パースエラーなど
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * URLからProject-LiteのボードID(数字)を抽出する
+     */
+    private function extractBoardId($value)
+    {
+        // 空ならnull
+        if (empty($value)) return null;
+
+        // URL形式 (.../boards/123...) から数字を抽出
+        if (preg_match('/\/boards\/(\d+)/', $value, $matches)) {
+            return (int) $matches[1];
+        }
+
+        // 既に数字ならそのまま返す
+        return (int) $value;
     }
 }

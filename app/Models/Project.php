@@ -67,4 +67,29 @@ class Project extends Model
             $this->attributes['figma_file_key'] = $value;
         }
     }
+
+    /**
+     * Project-LiteのボードIDを設定する際のミューテータ
+     * URLが入力された場合、そこからID部分(数字)を抽出する
+     */
+    protected function plBoardId(): Attribute
+    {
+        return Attribute::make(
+            set: function ($value) {
+                // 空の場合はnull
+                if (empty($value)) {
+                    return null;
+                }
+
+                // URL形式 (.../boards/123...) から数字を抽出
+                // 例: http://localhost/boards/5 -> 5
+                if (preg_match('/\/boards\/(\d+)/', $value, $matches)) {
+                    return (int) $matches[1];
+                }
+
+                // URLじゃなくて直接数字が入力された場合はそのまま保存
+                return (int) $value;
+            }
+        );
+    }
 }
