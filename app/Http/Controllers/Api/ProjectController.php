@@ -11,6 +11,7 @@ use App\Models\NotionPage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 class ProjectController extends Controller
 {
@@ -194,6 +195,8 @@ class ProjectController extends Controller
                         ]);
                     }
                 }
+                // ★追加: Notionページ構成が変わったので、キャッシュを削除して次回再取得させる
+                Cache::forget("project_{$project->id}_notion_info");
             }
 
             // 更新されたデータを返す
@@ -260,39 +263,44 @@ class ProjectController extends Controller
             return response()->json(['pages' => []]);
         }
 
-        $token = env('NOTION_API_TOKEN');
-        $version = env('NOTION_VERSION', '2022-06-28');
-        $results = [];
+        // ★キャッシュキーの生成 (プロジェクトごとにユニーク)
+        $cacheKey = "project_{$project->id}_notion_info";
 
-        // 2. 各ページについてNotion APIを叩く
-        foreach ($project->notionPages as $page) {
-            // ページ詳細取得API: https://api.notion.com/v1/pages/{page_id}
-            $response = Http::withToken($token)
-                ->withHeaders(['Notion-Version' => $version])
-                ->get("https://api.notion.com/v1/pages/{$page->page_id}");
+        // ★ Cache::remember でラップする
+        // 第2引数は保存期間(秒)。ここでは 3600秒 = 1時間 とします。
+        // キャッシュがあればそれを返し、なければ中の処理を実行して保存します。
+        $results = Cache::remember($cacheKey, 3600, function () use ($project) {
+            
+            $token = env('NOTION_API_TOKEN');
+            $version = env('NOTION_VERSION', '2022-06-28');
+            $data = [];
 
-            if ($response->successful()) {
-                $data = $response->json();
-                
-                // 成功したらリストに追加
-                $results[] = [
-                    'id' => $data['id'],
-                    'url' => $data['url'],
-                    'icon' => $data['icon'] ?? null,
-                    'cover' => $data['cover'] ?? null,
-                    'last_edited_time' => $data['last_edited_time'],
-                    // タイトルなどの詳細は 'properties' の中にある（構造が深いのでそのまま渡す）
-                    'properties' => $data['properties'] ?? [],
-                ];
-            } else {
-                // 失敗（権限がない、消されたなど）
-                $results[] = [
-                    'id' => $page->page_id,
-                    'error' => 'Access denied or Not found',
-                    'status' => $response->status(),
-                ];
+            foreach ($project->notionPages as $page) {
+                // APIリクエスト
+                $response = Http::withToken($token)
+                    ->withHeaders(['Notion-Version' => $version])
+                    ->get("https://api.notion.com/v1/pages/{$page->page_id}");
+
+                if ($response->successful()) {
+                    $json = $response->json();
+                    $data[] = [
+                        'id' => $json['id'],
+                        'url' => $json['url'],
+                        'icon' => $json['icon'] ?? null,
+                        'cover' => $json['cover'] ?? null,
+                        'last_edited_time' => $json['last_edited_time'],
+                        'properties' => $json['properties'] ?? [],
+                    ];
+                } else {
+                    $data[] = [
+                        'id' => $page->page_id,
+                        'error' => 'Access denied or Not found',
+                        'status' => $response->status(),
+                    ];
+                }
             }
-        }
+            return $data;
+        });
 
         return response()->json(['pages' => $results]);
     }

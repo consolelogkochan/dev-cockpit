@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { DocumentTextIcon } from '@heroicons/react/24/outline';
+import { 
+    DocumentTextIcon, 
+    ArrowTopRightOnSquareIcon, 
+    BookOpenIcon 
+} from '@heroicons/react/24/outline';
 import client from '../lib/axios';
 
 type Props = {
     projectId: number;
 };
 
-// Notion APIのデータ型 (必要な部分のみ定義)
 type NotionPage = {
     id: string;
     url: string;
@@ -17,8 +20,20 @@ type NotionPage = {
         file?: { url: string };
     } | null;
     last_edited_time: string;
-    properties: any; // プロパティは可変なのでanyで逃げる
-    error?: string; // エラー時のメッセージ
+    properties: any; 
+    error?: string;
+};
+
+// 相対時間計算
+const timeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return date.toLocaleDateString();
 };
 
 const NotionWidget = ({ projectId }: Props) => {
@@ -36,12 +51,9 @@ const NotionWidget = ({ projectId }: Props) => {
                 setLoading(false);
             }
         };
-
         fetchData();
     }, [projectId]);
 
-    // タイトルを取得するヘルパー関数
-    // Notionは "Name" や "タイトル" などカラム名が変わる可能性があるため、type: 'title' を探すのが確実
     const getPageTitle = (properties: any) => {
         for (const key in properties) {
             if (properties[key].type === 'title') {
@@ -51,22 +63,14 @@ const NotionWidget = ({ projectId }: Props) => {
                 }
             }
         }
-        return '無題のページ';
+        return 'Untitled Page';
     };
 
-    // アイコンを表示するヘルパー関数
     const renderIcon = (icon: NotionPage['icon']) => {
         if (!icon) return <DocumentTextIcon className="h-4 w-4 text-gray-400" />;
-        
-        if (icon.type === 'emoji') {
-            return <span className="text-lg leading-none">{icon.emoji}</span>;
-        }
-        
+        if (icon.type === 'emoji') return <span className="text-base leading-none">{icon.emoji}</span>;
         const imageUrl = icon.external?.url || icon.file?.url;
-        if (imageUrl) {
-            return <img src={imageUrl} alt="icon" className="h-5 w-5 rounded-sm object-cover" />;
-        }
-
+        if (imageUrl) return <img src={imageUrl} alt="icon" className="h-5 w-5 rounded-sm object-cover bg-gray-100" />;
         return <DocumentTextIcon className="h-4 w-4 text-gray-400" />;
     };
 
@@ -74,50 +78,57 @@ const NotionWidget = ({ projectId }: Props) => {
         return (
             <div className="h-full flex flex-col justify-center items-center text-gray-400 animate-pulse">
                 <DocumentTextIcon className="h-8 w-8 mb-2 opacity-50" />
-                <span className="text-xs">Loading Notion...</span>
+                <span className="text-xs">Loading Wiki...</span>
             </div>
         );
     }
 
     if (pages.length === 0) {
         return (
-            <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50 rounded border border-dashed text-xs">
-                Notionページ設定なし
+            <div className="h-full flex flex-col justify-center items-center text-gray-400 bg-gray-50 rounded border border-dashed p-4">
+                <p className="text-xs">ページ設定なし</p>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col h-full">
-            <ul className="space-y-2 overflow-y-auto min-h-0 pr-1">
+        <div className="flex flex-col h-full relative">
+            {/* ヘッダー */}
+            <div className="mb-3 flex items-center text-gray-500">
+                <BookOpenIcon className="h-4 w-4 mr-1.5 text-gray-600" />
+                <span className="text-xs font-bold uppercase tracking-wider">Docs & Wiki</span>
+            </div>
+
+            <ul className="space-y-2 overflow-y-auto min-h-0 pr-1 pb-2">
                 {pages.map((page) => (
                     <li key={page.id}>
                         {page.error ? (
-                            // エラー（権限なしなど）の場合
-                            <div className="p-2 bg-red-50 text-red-600 rounded text-xs flex items-center">
+                            <div className="p-2 bg-red-50 text-red-600 rounded text-xs flex items-center border border-red-100">
                                 <span className="mr-2">⚠️</span>
                                 <div>
                                     <p className="font-bold">Access Denied</p>
-                                    <p className="text-[10px]">コネクト設定を確認してください</p>
+                                    <p className="text-[10px] opacity-75">権限を確認してください</p>
                                 </div>
                             </div>
                         ) : (
-                            // 正常に取得できた場合
                             <a 
                                 href={page.url} 
                                 target="_blank" 
                                 rel="noreferrer"
-                                className="flex items-center p-2 bg-gray-50 rounded border border-gray-100 hover:bg-white hover:shadow-sm transition group"
+                                className="flex items-center p-2.5 bg-gray-50 rounded border border-gray-100 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition group"
                             >
-                                <div className="mr-3 shrink-0">
+                                <div className="mr-3 shrink-0 w-6 flex justify-center">
                                     {renderIcon(page.icon)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-700 truncate group-hover:text-indigo-600 transition-colors">
-                                        {getPageTitle(page.properties)}
-                                    </p>
-                                    <p className="text-[10px] text-gray-400">
-                                        最終更新: {new Date(page.last_edited_time).toLocaleDateString()}
+                                    <div className="flex justify-between items-start">
+                                        <p className="text-sm font-medium text-gray-700 truncate group-hover:text-indigo-600 transition-colors">
+                                            {getPageTitle(page.properties)}
+                                        </p>
+                                        <ArrowTopRightOnSquareIcon className="h-3 w-3 text-gray-300 group-hover:text-indigo-400 ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 mt-0.5">
+                                        Edited {timeAgo(page.last_edited_time)}
                                     </p>
                                 </div>
                             </a>
