@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // ログアウト関数
     const logout = async () => {
         try {
-            await client.post('/auth/logout'); // Laravel側のセッション削除
+            await client.post('/api/auth/logout'); // Laravel側のセッション削除
             setUser(null); // React側のユーザー情報削除
             // ★追加: ログアウト時にフラグを消す
             localStorage.removeItem('loggedIn');

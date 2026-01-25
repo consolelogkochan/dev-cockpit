@@ -12,6 +12,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import AuthGuard from './components/AuthGuard';
 import AuthenticatedLayout from './layouts/AuthenticatedLayout';
 import ProjectDetail from './pages/ProjectDetail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
     return (
@@ -23,6 +25,9 @@ function App() {
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
                         <Route path="/" element={<Login />} />
+                        {/* ★ここに追加！ログインできなくてもアクセスできないと困るため */}
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/password-reset/:token" element={<ResetPassword />} />
                     </Route>
                     
                     {/* ▼▼▼ ここから先は会員限定エリア (AuthGuardで守る) ▼▼▼ */}

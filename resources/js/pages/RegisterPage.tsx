@@ -19,7 +19,7 @@ const Register = () => {
 
         try {
             await client.get('/sanctum/csrf-cookie');
-            await client.post('/auth/register', { 
+            await client.post('/api/auth/register', { 
                 name, 
                 email,
                 invitation_code: invitationCode, // ★追加: バックエンドへ送信
@@ -27,10 +27,14 @@ const Register = () => {
                 password_confirmation: passwordConfirmation
             });
 
-            // ★追加: 登録成功時もフラグを立てる
-            localStorage.setItem('loggedIn', 'true');
+            // ★修正: ログイン画面へ飛ばし、メッセージの内容を変更
+            navigate('/login', { 
+                state: { 
+                    message: '確認メールを送信しました。メール内のリンクをクリックしてアカウントを有効化してください。',
+                    type: 'success'
+                } 
+            });
             
-            navigate('/dashboard');
         } catch (err: any) {
             if (err.response && err.response.status === 422) {
                 const errors = err.response.data.errors;
@@ -127,6 +131,7 @@ const Register = () => {
                         onChange={(e) => setInvitationCode(e.target.value)}
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                         placeholder="管理者より招待コードを受領してください。"
+                        required // ★これを追加
                     />
                 </div>
                 

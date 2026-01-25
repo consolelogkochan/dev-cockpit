@@ -1,5 +1,5 @@
 import React, { useState, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; // Linkを追加
+import { useNavigate, Link, useLocation } from 'react-router-dom'; // Linkを追加
 import client from '../lib/axios';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,13 +12,17 @@ const Login = () => {
     const navigate = useNavigate();
     const { getUser } = useAuth(); // ★追加 2: ContextからgetUser関数をもらう
 
+    // ▼▼▼ ★追加 : 前の画面(Register)から渡されたメッセージを受け取る ▼▼▼
+    const location = useLocation();
+    const [successMessage, setSuccessMessage] = useState(location.state?.message || '');
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError('');
 
         try {
             await client.get('/sanctum/csrf-cookie');
-            await client.post('/auth/login', { email, password });
+            await client.post('/api/auth/login', { email, password });
 
             // ★追加: ログイン成功の証（フラグ）をブラウザに残す
             localStorage.setItem('loggedIn', 'true');
@@ -42,6 +46,13 @@ const Login = () => {
         <div>
             <h3 className="text-xl font-semibold mb-4 text-center">ログイン</h3>
             
+            {/* ▼▼▼ ★追加 3: 成功メッセージがあれば緑色の帯を表示 ▼▼▼ */}
+            {successMessage && (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 text-sm text-center">
+                    {successMessage}
+                </div>
+            )}
+
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
                     {error}
@@ -100,6 +111,11 @@ const Login = () => {
                 <div className="mt-4 text-center">
                     <Link to="/register" className="text-sm text-blue-500 hover:underline">
                         アカウントをお持ちでない方はこちら
+                    </Link>
+                </div>
+                <div className="text-center mb-4">
+                    <Link to="/forgot-password" className="text-sm text-blue-500 hover:underline">
+                        パスワードをお忘れですか？
                     </Link>
                 </div>
             </form>

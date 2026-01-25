@@ -6,8 +6,23 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectLiteController;
 
+// 認証不要なルートに追加
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);
+
+// ★追加: メール認証用ルート (名前付きルート 'verification.verify' が必須)
+Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
+    ->name('verification.verify');
+
+// ★追加: パスワードリセット関連
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+
 // ログインしている人だけがアクセスできるエリア
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    // ★ログアウトはここ！ (ログイン中の人しかログアウトできないため)
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
     
     // 自分の情報を取得 (Controllerを使わず、ここで直接返すのが一番シンプルです)
     Route::get('/user', function (Request $request) {
@@ -43,4 +58,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // ▼ ★追加: 更新 (PUT)
     Route::put('/projects/{project}', [ProjectController::class, 'update']);
+
 });

@@ -21,7 +21,7 @@ return new class extends Migration
             // ▼ ここから追加・変更
             $table->string('avatar_url')->nullable()->comment('アバター画像URL');
             $table->string('role')->default('user')->comment('権限: admin/user');
-            $table->boolean('is_active')->default(true)->comment('有効アカウントフラグ');
+            $table->boolean('is_active')->default(false)->comment('有効アカウントフラグ');
             // ▲ ここまで
             
             $table->rememberToken();
