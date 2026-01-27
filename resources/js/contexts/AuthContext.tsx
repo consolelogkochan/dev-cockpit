@@ -1,16 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import client from '../lib/axios';
+// ▼▼▼ 1. ここを追加 (types/index.ts から User型 を読み込む) ▼▼▼
+import { User } from '../types';
 
-// ユーザー情報の型定義 (必要に応じて項目を増やせます)
-type User = {
-    id: number;
-    name: string;
-    email: string;
-} | null;
 
 // Contextが持つ機能の型定義
 type AuthContextType = {
-    user: User;
+    user: User| null;
     login: (userData: User) => void; // ログイン成功時にユーザーをセットする
     logout: () => Promise<void>;     // ログアウト処理
     isLoading: boolean;              // 読み込み中かどうか
@@ -20,7 +16,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User>(null);
+    const [user, setUser] = useState<User| null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     // ユーザー情報をサーバーから取得する関数

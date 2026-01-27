@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectLiteController;
+use App\Http\Controllers\Api\Admin\UserController;
 
 // 認証不要なルートに追加
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -59,4 +60,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ▼ ★追加: 更新 (PUT)
     Route::put('/projects/{project}', [ProjectController::class, 'update']);
 
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin Routes (管理者専用)
+|--------------------------------------------------------------------------
+*/
+// ログイン済み(auth:sanctum) かつ 管理者(admin) の場合のみアクセス可能
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    
+    // 動作確認用: 管理者チェックAPI
+    Route::get('/check', function () {
+        return response()->json(['message' => 'あなたは管理者です。']);
+    });
+
+    // 今後ここにユーザー管理APIなどを追加していきます
+    // Route::get('/users', ...);
+    // ★追加: ユーザー管理API
+    Route::get('/users', [UserController::class, 'index']);   // 一覧
+    Route::delete('/users/{id}', [UserController::class, 'destroy']); // 削除
 });

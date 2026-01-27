@@ -14,6 +14,8 @@ import AuthenticatedLayout from './layouts/AuthenticatedLayout';
 import ProjectDetail from './pages/ProjectDetail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import UserList from './pages/admin/UserList'; // ★追加
+import AdminGuard from './components/AdminGuard'; // ★追加
 
 function App() {
     return (
@@ -39,6 +41,11 @@ function App() {
 
                             {/* ▼ ★追加: 詳細ページのルート (:id は可変パラメータ) */}
                             <Route path="/projects/:id" element={<ProjectDetail />} />
+                            
+                            {/* ▼▼▼ ★追加: 管理者専用エリア ▼▼▼ */}
+                            <Route element={<AdminGuard />}>
+                                <Route path="/admin/users" element={<UserList />} />
+                            </Route>
                         </Route>
                     </Route>
                     {/* ▲▲▲ 会員限定エリア終了 ▲▲▲ */}

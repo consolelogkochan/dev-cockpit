@@ -27,6 +27,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'avatar_url',
         'role',
         'is_active',
+        'is_admin',
     ];
 
     /**
@@ -50,6 +51,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_admin' => 'boolean',
         ];
     }
 

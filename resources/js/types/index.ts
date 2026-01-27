@@ -6,6 +6,10 @@ export interface User {
     name: string;
     email: string;
     email_verified_at: string;
+    is_admin: boolean; // ★追加
+    // ▼▼▼ ★追加: 日付情報を追加してください ▼▼▼
+    created_at?: string; // ? をつけておくと、万が一データがなくてもエラーになりません
+    updated_at?: string;
 }
 
 // Notionページの型定義も追加しておくと便利です

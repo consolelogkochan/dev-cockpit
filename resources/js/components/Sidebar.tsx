@@ -1,7 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; // ★追加
 
 const Sidebar = () => {
+    const { user } = useAuth(); // ★追加: ユーザー情報を取得
+
     const navClass = ({ isActive }: { isActive: boolean }) => 
         `block py-2.5 px-4 rounded transition duration-200 ${
             isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
@@ -20,6 +23,17 @@ const Sidebar = () => {
                 <NavLink to="/projects" className={navClass}>
                     プロジェクト
                 </NavLink>
+                {/* ▼▼▼ ★追加: 管理者のみ表示するセクション ▼▼▼ */}
+                {user?.is_admin && (
+                    <div className="mt-8">
+                        <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                            管理者メニュー
+                        </p>
+                        <NavLink to="/admin/users" className={navClass}>
+                            ユーザー管理
+                        </NavLink>
+                    </div>
+                )}
             </nav>
         </div>
     );

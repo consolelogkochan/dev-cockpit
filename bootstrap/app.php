@@ -14,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // ▼▼▼ この設定を追加してください ▼▼▼
         $middleware->statefulApi();
+
+        // ★追加: 'admin' という名前で IsAdmin ミドルウェアを使えるようにする
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\IsAdmin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
