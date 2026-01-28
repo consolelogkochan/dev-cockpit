@@ -32,6 +32,10 @@ const Sidebar = () => {
                         <NavLink to="/admin/users" className={navClass}>
                             ユーザー管理
                         </NavLink>
+                        {/* ★追加: ここに招待コード管理へのリンクを追加 */}
+                        <NavLink to="/admin/invitations" className={navClass}>
+                            招待コード管理
+                        </NavLink>
                     </div>
                 )}
             </nav>

@@ -12,6 +12,16 @@ export interface User {
     updated_at?: string;
 }
 
+// ★追加: 招待コードの型
+export interface Invitation {
+    id: number;
+    code: string;
+    is_used: boolean;
+    created_at: string;
+    // リレーション (with('creator')で取得した場合)
+    creator?: User; 
+}
+
 // Notionページの型定義も追加しておくと便利です
 export interface NotionPage {
     id: number;

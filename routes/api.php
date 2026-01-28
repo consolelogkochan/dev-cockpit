@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectLiteController;
 use App\Http\Controllers\Api\Admin\UserController;
+use App\Http\Controllers\Api\Admin\InvitationController;
 
 // 認証不要なルートに追加
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -80,4 +81,8 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     // ★追加: ユーザー管理API
     Route::get('/users', [UserController::class, 'index']);   // 一覧
     Route::delete('/users/{id}', [UserController::class, 'destroy']); // 削除
+    // ★追加: 招待コード管理API
+    Route::get('/invitations', [InvitationController::class, 'index']);   // 一覧
+    Route::post('/invitations', [InvitationController::class, 'store']);  // 生成
+    Route::delete('/invitations/{id}', [InvitationController::class, 'destroy']); // 削除
 });
