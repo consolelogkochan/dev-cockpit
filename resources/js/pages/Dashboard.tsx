@@ -115,22 +115,6 @@ const Dashboard = () => {
                             />
                         ))}
                     </div>
-
-                    {/* ★追加: モーダルの配置 */}
-                    <Modal
-                        isOpen={isModalOpen}
-                        closeModal={() => setIsModalOpen(false)}
-                        title="新規プロジェクト作成"
-                    >
-                        {/* ↓ここにフォームを配置 */}
-                        <CreateProjectForm 
-                            onCancel={() => setIsModalOpen(false)} 
-                            // ★追加: 成功したら refreshKey を更新して再取得を走らせる
-                            onSuccess={() => setRefreshKey(prev => prev + 1)}
-                            // ★追加: 編集データを渡す
-                            initialData={editingProject ?? undefined}
-                        />
-                    </Modal>
                     
                     {/* ページネーション */}
                     <Pagination 
@@ -140,6 +124,21 @@ const Dashboard = () => {
                     />
                 </>
             )}
+            {/* ★追加: モーダルの配置 */}
+            <Modal
+                isOpen={isModalOpen}
+                closeModal={() => setIsModalOpen(false)}
+                title="新規プロジェクト作成"
+            >
+                {/* ↓ここにフォームを配置 */}
+                <CreateProjectForm 
+                    onCancel={() => setIsModalOpen(false)} 
+                    // ★追加: 成功したら refreshKey を更新して再取得を走らせる
+                    onSuccess={() => setRefreshKey(prev => prev + 1)}
+                    // ★追加: 編集データを渡す
+                    initialData={editingProject ?? undefined}
+                />
+            </Modal>
         </div>
     );
 };

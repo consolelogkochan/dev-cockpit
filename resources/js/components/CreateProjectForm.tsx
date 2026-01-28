@@ -3,6 +3,7 @@ import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { PlusIcon, TrashIcon, QueueListIcon } from '@heroicons/react/24/outline';
 import client from '../lib/axios'; // ★追加: APIクライアント
 import { Project } from '../types';
+import HybridImagePicker from './HybridImagePicker'; // ★追加
 
 // フォームの入力データの型定義
 type FormInputs = {
@@ -23,6 +24,10 @@ type Props = {
 
 const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
     const [isSubmitting, setIsSubmitting] = useState(false); // ★追加: 送信中フラグ
+
+    // ★追加: 画像データの管理用State
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedUrl, setSelectedUrl] = useState<string | null>(initialData?.thumbnail_url || null);
     
     // ★重要: 初期値の計算
     // 新規なら空、編集なら initialData の値をセット
@@ -70,6 +75,9 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
                     ? initialData.notion_pages.map(p => ({ id: p.page_id }))
                     : [{ id: '' }]
             });
+            // ★追加: 画像の初期値セット
+            setSelectedUrl(initialData.thumbnail_url ?? null);
+            setSelectedFile(null);
         } else {
             // 新規作成モード: フォームを空にする
             reset({
@@ -81,20 +89,62 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
                 figma_file_key: '',
                 notion_pages: [{ id: '' }]
             });
+            setSelectedUrl(null);
+            setSelectedFile(null);
         }
     }, [initialData, reset]);
     // ▲▲▲ 追加ここまで ▲▲▲
 
+    // ★重要: HybridImagePickerからの変更を受け取る関数
+    const handleImageChange = (file: File | null, url: string | null) => {
+        setSelectedFile(file);
+        setSelectedUrl(url);
+    };
+
     const onSubmit: SubmitHandler<FormInputs> = async (data) => {
         setIsSubmitting(true);
         try {
+            // ★重要: JSONではなくFormDataを作成する
+            const formData = new FormData();
+            formData.append('title', data.title);
+            formData.append('description', data.description || ''); // nullなら空文字
+            formData.append('github_repo', data.github_repo || '');
+            formData.append('pl_board_id', data.pl_board_id || '');
+            formData.append('figma_file_key', data.figma_file_key || '');
+
+            // 画像データの処理
+            if (selectedFile) {
+                // ファイルが選択されている場合
+                formData.append('thumbnail_file', selectedFile);
+            } else if (selectedUrl) {
+                // URLが入力されている場合 (または初期値のまま)
+                formData.append('thumbnail_url', selectedUrl);
+            }
+            // Notionページの配列処理
+            // FormDataで配列を送る場合は `key[index][property]` の形式にする必要があります
+            data.notion_pages.forEach((page, index) => {
+                if (page.id) {
+                    formData.append(`notion_pages[${index}][id]`, page.id);
+                }
+            });
+
+            // PUTリクエストの場合、LaravelはFormDataを正しく受け取れないことがあるため、
+            // POSTメソッドにして `_method: PUT` を送るのが定石ですが、
+            // 今回は Axios の設定で Content-Type: multipart/form-data を送れば動く場合も多いです。
+            // もし動かない場合は `_method` トリックを使います。今回は安全策で `_method` を使います。
+
             if (initialData) {
-                // ★編集モード: PUT /api/projects/{id}
-                await client.put(`/api/projects/${initialData.id}`, data);
+                // ★編集モード (PUTの代わり)
+                formData.append('_method', 'PUT');
+                await client.post(`/api/projects/${initialData.id}`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
                 alert('プロジェクトを更新しました！');
             } else {
-                // ★新規モード: POST /api/projects
-                await client.post('/api/projects', data);
+                // ★新規モード
+                await client.post('/api/projects', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
                 alert('プロジェクトを作成しました！');
             }
             
@@ -138,18 +188,12 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
                 />
             </div>
 
-            {/* ★追加: サムネイルURL */}
-            <div>
-                <label className="block text-sm font-medium text-gray-700">サムネイル画像 URL</label>
-                <input
-                    type="url" // URL用の入力欄にする
-                    {...register('thumbnail_url')}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border px-3 py-2"
-                    placeholder="https://example.com/image.png (任意)"
+            {/* ★変更: サムネイル画像 (Hybrid Picker) */}
+            <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                <HybridImagePicker
+                    defaultUrl={initialData?.thumbnail_url}
+                    onImageChange={handleImageChange}
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                    画像のURLを入力してください。入力がない場合はデフォルト表示になります。
-                </p>
             </div>
 
             {/* 3. 連携ツール URL群 (GitHub, Project-Lite, Figma) */}

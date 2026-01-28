@@ -12,9 +12,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use App\Traits\UploadsImages;
 
 class ProjectController extends Controller
 {
+    use UploadsImages; // ★追加: Traitを使用
+
     // プロジェクト一覧を取得する
     public function index(Request $request)
     {
@@ -79,6 +82,7 @@ class ProjectController extends Controller
             'description' => 'nullable|string',
             // ★追加: URL形式であることをチェック (空でもOK)
             'thumbnail_url' => 'nullable|url|max:2048',
+            'thumbnail_file' => 'nullable|image|max:2048', // ★追加: ファイルアップロード用 (2MBまで)
 
             'github_repo' => 'nullable|string',
             'pl_board_id' => 'nullable|string',
@@ -94,7 +98,15 @@ class ProjectController extends Controller
                 'pl_board_id' => $this->extractBoardId($request->pl_board_id)
             ]);
         }
-        // ▲▲▲ 追加ここまで ▲▲▲
+
+        // ★追加: 画像アップロード処理
+        // ファイルがあればアップロードし、そのパスを thumbnail_url として使う
+        if ($request->hasFile('thumbnail_file')) {
+            $path = $this->uploadImage($request, 'thumbnail_file', 'projects');
+            if ($path) {
+                $validated['thumbnail_url'] = $path;
+            }
+        }
 
         // 2. トランザクション開始 (失敗したら全部なかったことにする)
         return DB::transaction(function () use ($validated, $request) {
@@ -106,7 +118,7 @@ class ProjectController extends Controller
                 'title' => $validated['title'],
                 'description' => $validated['description'],
                 // ★追加: そのまま保存
-                'thumbnail_url' => $validated['thumbnail_url'],
+                'thumbnail_url' => $validated['thumbnail_url'] ?? null,
 
                 // ★修正: $validated ではなく、$request から取得する
                 'pl_board_id' => $request->pl_board_id,
@@ -138,6 +150,11 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project)
     {
+        // ★必要であれば画像削除処理を追加
+        if ($project->thumbnail_url && str_starts_with($project->thumbnail_url, '/storage/')) {
+            $this->deleteImage($project->thumbnail_url);
+        }
+        
         // プロジェクトを削除
         // (NotionPageはマイグレーションで onDelete('cascade') を設定したので自動で消えます)
         $project->delete();
@@ -155,6 +172,7 @@ class ProjectController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'thumbnail_url' => 'nullable|url|max:2048',
+            'thumbnail_file' => 'nullable|image|max:2048', // ★追加
             'github_repo' => 'nullable|string',
             'pl_board_id' => 'nullable|string',
             'figma_file_key' => 'nullable|string',
@@ -168,14 +186,26 @@ class ProjectController extends Controller
                 'pl_board_id' => $this->extractBoardId($request->pl_board_id)
             ]);
         }
-        // ▲▲▲ 追加ここまで ▲▲▲
+        
+        // ★追加: 画像アップロード処理
+        if ($request->hasFile('thumbnail_file')) {
+            // 古い画像がローカルファイルなら削除する (任意)
+            // if (str_starts_with($project->thumbnail_url, '/storage/')) {
+            //     $this->deleteImage($project->thumbnail_url);
+            // }
+
+            $path = $this->uploadImage($request, 'thumbnail_file', 'projects');
+            if ($path) {
+                $validated['thumbnail_url'] = $path;
+            }
+        }
 
         return DB::transaction(function () use ($validated, $project, $request) {
             // 2. 基本情報の更新
             $project->update([
                 'title' => $validated['title'],
                 'description' => $validated['description'],
-                'thumbnail_url' => $validated['thumbnail_url'],
+                'thumbnail_url' => $validated['thumbnail_url'] ?? $project->thumbnail_url,
                 // ★修正: ここも $request を使う
                 'pl_board_id' => $request->pl_board_id,
                 'github_repo' => $this->extractGitHubRepo($validated['github_repo']),
