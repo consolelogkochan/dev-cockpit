@@ -31,6 +31,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return $request->user();
     });
 
+    // サイドバー用のリスト取得 (projects/{project} より先に書くこと！)
+    Route::get('projects/list', [App\Http\Controllers\Api\ProjectController::class, 'list']);
+
     // 今後、他の認証が必要なAPIはここに追加していきます
     // 例: Route::get('/todos', ...);
     Route::get('/projects', [ProjectController::class, 'index']);

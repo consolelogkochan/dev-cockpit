@@ -154,7 +154,7 @@ class ProjectController extends Controller
         if ($project->thumbnail_url && str_starts_with($project->thumbnail_url, '/storage/')) {
             $this->deleteImage($project->thumbnail_url);
         }
-        
+
         // プロジェクトを削除
         // (NotionPageはマイグレーションで onDelete('cascade') を設定したので自動で消えます)
         $project->delete();
@@ -402,5 +402,20 @@ class ProjectController extends Controller
 
         // 既に数字ならそのまま返す
         return (int) $value;
+    }
+
+    /**
+     * サイドバー用：全プロジェクトの軽量リストを取得
+     */
+    public function list()
+    {
+        // ID, タイトル, アイコン(サムネイル) だけを取得
+        // 更新順（新しいものが上）
+        $projects = Project::select('id', 'title', 'thumbnail_url')
+            ->orderBy('updated_at', 'desc')
+            ->limit(10) // ★追加: 10件に制限
+            ->get();
+
+        return response()->json($projects);
     }
 }
