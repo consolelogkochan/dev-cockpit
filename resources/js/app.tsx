@@ -17,6 +17,8 @@ import ResetPassword from './pages/ResetPassword';
 import UserList from './pages/admin/UserList'; // ★追加
 import InvitationList from './pages/admin/InvitationList'; // ★追加
 import AdminGuard from './components/AdminGuard'; // ★追加
+import Profile from './pages/Profile'; // ★追加
+import VerifyEmailChange from './pages/VerifyEmailChange'; // ★追加
 
 function App() {
     return (
@@ -31,6 +33,8 @@ function App() {
                         {/* ★ここに追加！ログインできなくてもアクセスできないと困るため */}
                         <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/password-reset/:token" element={<ResetPassword />} />
+                        {/* ▼▼▼ 追加: メール検証用ルート ▼▼▼ */}
+                        <Route path="/verify-email" element={<VerifyEmailChange />} />
                     </Route>
                     
                     {/* ▼▼▼ ここから先は会員限定エリア (AuthGuardで守る) ▼▼▼ */}
@@ -42,6 +46,9 @@ function App() {
 
                             {/* ▼ ★追加: 詳細ページのルート (:id は可変パラメータ) */}
                             <Route path="/projects/:id" element={<ProjectDetail />} />
+
+                            {/* ▼▼▼ 追加 ▼▼▼ */}
+                            <Route path="/profile" element={<Profile />} />
 
                             {/* ▼▼▼ ★追加: 管理者専用エリア ▼▼▼ */}
                             <Route element={<AdminGuard />}>

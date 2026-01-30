@@ -7,6 +7,7 @@ export interface User {
     email: string;
     email_verified_at: string;
     is_admin: boolean; // ★追加
+    avatar_url?: string | null; // ★追加！ (?をつけることで存在しない場合も許容)
     // ▼▼▼ ★追加: 日付情報を追加してください ▼▼▼
     created_at?: string; // ? をつけておくと、万が一データがなくてもエラーになりません
     updated_at?: string;

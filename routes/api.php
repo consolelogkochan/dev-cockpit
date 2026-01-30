@@ -20,6 +20,9 @@ Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
 Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 
+// ★追加: メール変更確定用 (メール内のリンクから叩かれるため、認証の外に置くか、トークンのみで許可する)
+Route::post('/email/verify-change', [App\Http\Controllers\Api\ProfileController::class, 'verifyEmailChange']);
+
 // ログインしている人だけがアクセスできるエリア
 Route::middleware(['auth:sanctum'])->group(function () {
 
@@ -30,6 +33,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    // ▼▼▼ 追加: プロフィール更新 ▼▼▼
+    Route::post('/profile', [App\Http\Controllers\Api\ProfileController::class, 'update']);
 
     // サイドバー用のリスト取得 (projects/{project} より先に書くこと！)
     Route::get('projects/list', [App\Http\Controllers\Api\ProjectController::class, 'list']);

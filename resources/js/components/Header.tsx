@@ -42,9 +42,19 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                     className="flex items-center space-x-2 focus:outline-none"
                 >
                     <span className="text-gray-600 text-sm hidden md:block">{user?.name}</span>
-                    <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-lg hover:bg-indigo-600 transition">
-                        {userInitial}
-                    </div>
+                    {/* ▼▼▼ 修正: 画像があれば表示、なければイニシャル ▼▼▼ */}
+                    {user?.avatar_url ? (
+                        <img 
+                            src={user.avatar_url} 
+                            alt={user.name} 
+                            className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                        />
+                    ) : (
+                        <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-lg hover:bg-indigo-600 transition">
+                            {userInitial}
+                        </div>
+                    )}
+                    {/* ▲▲▲ 修正ここまで ▲▲▲ */}
                 </button>
 
                 {/* 2. ドロップダウンメニュー (isDropdownOpenがtrueの時だけ表示) */}
