@@ -153,7 +153,14 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
         } catch (error: any) {
             // ... エラー処理 (変更なし)
             console.error(error);
-            alert('保存に失敗しました。');
+            // ▼▼▼ 追加: 422エラーの詳細をアラートに出す（デバッグ用） ▼▼▼
+            if (error.response && error.response.status === 422) {
+                const errors = error.response.data.errors;
+                const messages = Object.keys(errors).map(key => `${key}: ${errors[key].join(', ')}`).join('\n');
+                alert(`入力内容に誤りがあります:\n${messages}`);
+            } else {
+                alert('保存に失敗しました。');
+            }
         } finally {
             setIsSubmitting(false);
         }

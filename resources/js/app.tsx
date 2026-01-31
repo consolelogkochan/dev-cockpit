@@ -17,6 +17,7 @@ import ResetPassword from './pages/ResetPassword';
 import UserList from './pages/admin/UserList'; // ★追加
 import InvitationList from './pages/admin/InvitationList'; // ★追加
 import AdminGuard from './components/AdminGuard'; // ★追加
+import Welcome from './pages/Welcome';
 import Profile from './pages/Profile'; // ★追加
 import VerifyEmailChange from './pages/VerifyEmailChange'; // ★追加
 
@@ -25,6 +26,7 @@ function App() {
         <BrowserRouter>
             <AuthProvider>
                 <Routes>
+                    <Route path="/" element={<Welcome />} />
                     {/* 認証が不要なページ (レイアウト適用) */}
                     <Route element={<GuestLayout />}>
                         <Route path="/login" element={<Login />} />
