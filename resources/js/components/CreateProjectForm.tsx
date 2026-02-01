@@ -4,7 +4,7 @@ import { PlusIcon, TrashIcon, QueueListIcon } from '@heroicons/react/24/outline'
 import client from '../lib/axios'; // ★追加: APIクライアント
 import { Project } from '../types';
 import HybridImagePicker from './HybridImagePicker'; // ★追加
-
+import toast from 'react-hot-toast'; // ★追加
 // フォームの入力データの型定義
 type FormInputs = {
     title: string;
@@ -139,13 +139,13 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
                 await client.post(`/api/projects/${initialData.id}`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
-                alert('プロジェクトを更新しました！');
+                toast.success('プロジェクトを更新しました！'); // ★変更
             } else {
                 // ★新規モード
                 await client.post('/api/projects', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
-                alert('プロジェクトを作成しました！');
+                toast.success('プロジェクトを作成しました！'); // ★変更
             }
             
             onSuccess();
@@ -157,10 +157,10 @@ const CreateProjectForm = ({ onCancel, onSuccess, initialData }: Props) => {
             if (error.response && error.response.status === 422) {
                 const errors = error.response.data.errors;
                 const messages = Object.keys(errors).map(key => `${key}: ${errors[key].join(', ')}`).join('\n');
-                alert(`入力内容に誤りがあります:\n${messages}`);
-            } else {
-                alert('保存に失敗しました。');
-            }
+                toast.error(`入力エラー:\n${messages}`, { duration: 5000 }); // ★変更
+            } 
+            // その他のエラーは Axiosインターセプター が自動でToastを出してくれるので
+            // ここでは何もしなくてOK（二重表示を防ぐ）
         } finally {
             setIsSubmitting(false);
         }

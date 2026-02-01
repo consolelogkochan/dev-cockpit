@@ -11,6 +11,7 @@ import {
     } from '@heroicons/react/24/outline';
 import client from '../lib/axios';
 import { useNavigate } from 'react-router-dom'; // ★変更: LinkではなくuseNavigateを使う
+import toast from 'react-hot-toast'; // ★追加
 
 
 type Props = {
@@ -36,9 +37,9 @@ const ProjectCard = ({ project, onDelete, onEdit }: Props) => {
 
         try {
             await client.delete(`/api/projects/${project.id}`);
+            toast.success('プロジェクトを削除しました'); // ★変更: 成功通知
             onDelete(); // 親（Dashboard）に再読み込みを依頼
         } catch (error) {
-            alert('削除に失敗しました。');
             console.error(error);
         }
     };

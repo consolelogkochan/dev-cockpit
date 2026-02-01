@@ -15,6 +15,7 @@ import NotionWidget from '../components/NotionWidget';
 import FigmaWidget from '../components/FigmaWidget';
 import NewsWidget from '../components/NewsWidget'; // ★追加
 import ProjectLiteWidget from '../components/ProjectLiteWidget';
+import toast from 'react-hot-toast'; // ★追加
 
 const ProjectDetail = () => {
     const { id } = useParams();

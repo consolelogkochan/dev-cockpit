@@ -20,11 +20,36 @@ import AdminGuard from './components/AdminGuard'; // ★追加
 import Welcome from './pages/Welcome';
 import Profile from './pages/Profile'; // ★追加
 import VerifyEmailChange from './pages/VerifyEmailChange'; // ★追加
+import NotFound from './pages/NotFound';
+import { Toaster } from 'react-hot-toast'; // ★追加
 
 function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
+                {/* ▼▼▼ ★追加: 通知の表示場所を確保 ▼▼▼ */}
+                <Toaster 
+                    position="top-right" 
+                    toastOptions={{
+                        duration: 4000,
+                        style: {
+                            background: '#363636',
+                            color: '#fff',
+                        },
+                        success: {
+                            style: {
+                                background: '#10B981', // TailwindのGreen-500
+                                color: '#fff',
+                            },
+                        },
+                        error: {
+                            style: {
+                                background: '#EF4444', // TailwindのRed-500
+                                color: '#fff',
+                            },
+                        },
+                    }} 
+                />
                 <Routes>
                     <Route path="/" element={<Welcome />} />
                     {/* 認証が不要なページ (レイアウト適用) */}
@@ -60,6 +85,8 @@ function App() {
                         </Route>
                     </Route>
                     {/* ▲▲▲ 会員限定エリア終了 ▲▲▲ */}
+                    {/* ▼▼▼ 追加: 404 Not Found (どこにもマッチしなかった場合) ▼▼▼ */}
+                    <Route path="*" element={<NotFound />} />
                 </Routes>
             </AuthProvider>
         </BrowserRouter>
