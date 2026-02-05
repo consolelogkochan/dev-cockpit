@@ -22,73 +22,91 @@ import Profile from './pages/Profile'; // ★追加
 import VerifyEmailChange from './pages/VerifyEmailChange'; // ★追加
 import NotFound from './pages/NotFound';
 import { Toaster } from 'react-hot-toast'; // ★追加
+// ★ 追加: QueryClientのインポート
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// ★ 追加: クライアントのインスタンス化
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            retry: 1, // エラー時の自動再試行回数
+            refetchOnWindowFocus: false, // ウィンドウフォーカス時の再取得を無効化（お好みで）
+            staleTime: 1000 * 60 * 5, // データが「古い」とみなされるまでの時間（5分）
+        },
+    },
+});
 
 function App() {
     return (
         <BrowserRouter>
-            <AuthProvider>
-                {/* ▼▼▼ ★追加: 通知の表示場所を確保 ▼▼▼ */}
-                <Toaster 
-                    position="top-right" 
-                    toastOptions={{
-                        duration: 4000,
-                        style: {
-                            background: '#363636',
-                            color: '#fff',
-                        },
-                        success: {
+            {/* ★追加: QueryClientProviderでアプリ全体をラップ */}
+            <QueryClientProvider client={queryClient}>
+                <AuthProvider>
+                
+                    {/* ▼▼▼ ★追加: 通知の表示場所を確保 ▼▼▼ */}
+                    <Toaster 
+                        position="top-right" 
+                        toastOptions={{
+                            duration: 4000,
                             style: {
-                                background: '#10B981', // TailwindのGreen-500
+                                background: '#363636',
                                 color: '#fff',
                             },
-                        },
-                        error: {
-                            style: {
-                                background: '#EF4444', // TailwindのRed-500
-                                color: '#fff',
+                            success: {
+                                style: {
+                                    background: '#10B981', // TailwindのGreen-500
+                                    color: '#fff',
+                                },
                             },
-                        },
-                    }} 
-                />
-                <Routes>
-                    <Route path="/" element={<Welcome />} />
-                    {/* 認証が不要なページ (レイアウト適用) */}
-                    <Route element={<GuestLayout />}>
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/" element={<Login />} />
-                        {/* ★ここに追加！ログインできなくてもアクセスできないと困るため */}
-                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                        <Route path="/password-reset/:token" element={<ResetPassword />} />
-                        {/* ▼▼▼ 追加: メール検証用ルート ▼▼▼ */}
-                        <Route path="/verify-email" element={<VerifyEmailChange />} />
-                    </Route>
-                    
-                    {/* ▼▼▼ ここから先は会員限定エリア (AuthGuardで守る) ▼▼▼ */}
-                    <Route element={<AuthGuard />}>
-                        {/* ★ここに AuthenticatedLayout を挟む */}
-                        <Route element={<AuthenticatedLayout />}>
-                            <Route path="/dashboard" element={<Dashboard />} />
-                            {/* 今後ページが増えたらここに足していく */}
+                            error: {
+                                style: {
+                                    background: '#EF4444', // TailwindのRed-500
+                                    color: '#fff',
+                                },
+                            },
+                        }} 
+                    />
+                    <Routes>
+                        <Route path="/" element={<Welcome />} />
+                        {/* 認証が不要なページ (レイアウト適用) */}
+                        <Route element={<GuestLayout />}>
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/register" element={<Register />} />
+                            <Route path="/" element={<Login />} />
+                            {/* ★ここに追加！ログインできなくてもアクセスできないと困るため */}
+                            <Route path="/forgot-password" element={<ForgotPassword />} />
+                            <Route path="/password-reset/:token" element={<ResetPassword />} />
+                            {/* ▼▼▼ 追加: メール検証用ルート ▼▼▼ */}
+                            <Route path="/verify-email" element={<VerifyEmailChange />} />
+                        </Route>
+                        
+                        {/* ▼▼▼ ここから先は会員限定エリア (AuthGuardで守る) ▼▼▼ */}
+                        <Route element={<AuthGuard />}>
+                            {/* ★ここに AuthenticatedLayout を挟む */}
+                            <Route element={<AuthenticatedLayout />}>
+                                <Route path="/dashboard" element={<Dashboard />} />
+                                {/* 今後ページが増えたらここに足していく */}
 
-                            {/* ▼ ★追加: 詳細ページのルート (:id は可変パラメータ) */}
-                            <Route path="/projects/:id" element={<ProjectDetail />} />
+                                {/* ▼ ★追加: 詳細ページのルート (:id は可変パラメータ) */}
+                                <Route path="/projects/:id" element={<ProjectDetail />} />
 
-                            {/* ▼▼▼ 追加 ▼▼▼ */}
-                            <Route path="/profile" element={<Profile />} />
+                                {/* ▼▼▼ 追加 ▼▼▼ */}
+                                <Route path="/profile" element={<Profile />} />
 
-                            {/* ▼▼▼ ★追加: 管理者専用エリア ▼▼▼ */}
-                            <Route element={<AdminGuard />}>
-                                <Route path="/admin/users" element={<UserList />} />
-                                <Route path="/admin/invitations" element={<InvitationList />} /> {/* ★追加 */}
+                                {/* ▼▼▼ ★追加: 管理者専用エリア ▼▼▼ */}
+                                <Route element={<AdminGuard />}>
+                                    <Route path="/admin/users" element={<UserList />} />
+                                    <Route path="/admin/invitations" element={<InvitationList />} /> {/* ★追加 */}
+                                </Route>
                             </Route>
                         </Route>
-                    </Route>
-                    {/* ▲▲▲ 会員限定エリア終了 ▲▲▲ */}
-                    {/* ▼▼▼ 追加: 404 Not Found (どこにもマッチしなかった場合) ▼▼▼ */}
-                    <Route path="*" element={<NotFound />} />
-                </Routes>
-            </AuthProvider>
+                        {/* ▲▲▲ 会員限定エリア終了 ▲▲▲ */}
+                        {/* ▼▼▼ 追加: 404 Not Found (どこにもマッチしなかった場合) ▼▼▼ */}
+                        <Route path="*" element={<NotFound />} />
+                    </Routes>
+                
+                </AuthProvider>
+            </QueryClientProvider>
         </BrowserRouter>
     );
 }
