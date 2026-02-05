@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { 
     ExclamationCircleIcon, 
     ClockIcon, 
     CalendarIcon,
     ArrowTopRightOnSquareIcon,
-    ClipboardDocumentCheckIcon, // ローディング用に追加
-    CheckCircleIcon
+    ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import client from '../lib/axios';
+import { useQuery } from '@tanstack/react-query'; // ★ TanStack Query
 
 type Task = {
     id: number;
@@ -35,49 +35,69 @@ type Props = {
     plBoardId: string | number;
 };
 
-// ★ Project-Liteの本番URL
-const PL_BASE_URL = 'https://project-lite.ikshowcase.site';
+// --- API Fetcher関数 (コンポーネントの外に定義) ---
+const fetchProjectLiteData = async (projectId: number) => {
+    // データ取得だけを担当。エラーはReact Queryがキャッチするのでtry-catch不要
+    const response = await client.get(`/api/projects/${projectId}/project-lite`);
+    return response.data as SummaryData;
+};
+
+// 環境変数からURLを取得 (なければデフォルト値)
+const PL_BASE_URL = import.meta.env.VITE_PROJECT_LITE_URL || 'https://project-lite.ikshowcase.site';
 
 const ProjectLiteWidget = ({ projectId, plBoardId }: Props) => {
-    const [data, setData] = useState<SummaryData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
+    // ★ 宣言的データフェッチ: useQuery
+    const { data, isLoading, isError, refetch } = useQuery({
+        queryKey: ['projectLite', projectId], // このキーでキャッシュ管理される
+        queryFn: () => fetchProjectLiteData(projectId),
+        enabled: !!projectId && !!plBoardId, // IDがある時だけ実行
+        staleTime: 1000 * 60 * 5, // 5分間は「新鮮」とみなして再取得しない
+        retry: 1, // エラー時の自動再試行回数
+    });
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await client.get(`/api/projects/${projectId}/project-lite`);
-                setData(response.data);
-            } catch (e) {
-                console.error(e);
-                setError(true);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [projectId]);
-
-    // ローディング (統一デザイン)
-    if (loading) {
+    // --- 1. Loading State (スケルトンUI) ---
+    // ユーザーを待たせている間、レイアウト崩れを防ぐためのプレースホルダー
+    if (isLoading) {
         return (
-            <div className="h-full flex flex-col justify-center items-center text-gray-400 animate-pulse">
-                <ClipboardDocumentCheckIcon className="h-8 w-8 mb-2 opacity-50" />
-                <span className="text-xs">Loading Tasks...</span>
+            <div className="flex h-full min-h-62.5 relative animate-pulse">
+                {/* 左側スケルトン */}
+                <div className="w-3/5 pr-4 border-r border-gray-100 flex flex-col gap-4">
+                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                    <div className="space-y-2">
+                        <div className="h-8 bg-gray-100 rounded w-full"></div>
+                        <div className="h-8 bg-gray-100 rounded w-full"></div>
+                    </div>
+                </div>
+                {/* 右側スケルトン */}
+                <div className="w-2/5 flex flex-col items-center justify-center pl-4">
+                    <div className="w-24 h-24 rounded-full border-4 border-gray-100 mb-2"></div>
+                    <div className="flex gap-2 w-full mt-2">
+                        <div className="h-10 bg-gray-100 rounded flex-1"></div>
+                        <div className="h-10 bg-gray-100 rounded flex-1"></div>
+                    </div>
+                </div>
             </div>
         );
     }
     
-    // エラー (統一デザイン)
-    if (error || !data) {
+    // --- 2. Error State (リカバリーUI) ---
+    if (isError || !data) {
         return (
-            <div className="h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded border border-dashed p-4">
-                <p className="text-xs mb-1">Project-Lite連携情報がありません</p>
-                <p className="text-[10px] text-gray-300">編集画面でBoard IDを設定してください</p>
+            <div className="h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded border border-dashed border-gray-200 p-4 group hover:bg-gray-50 transition-colors">
+                <ExclamationCircleIcon className="h-8 w-8 text-gray-300 mb-2 group-hover:text-red-300 transition-colors" />
+                <p className="text-xs mb-1 font-medium text-gray-500">データ取得エラー</p>
+                <button 
+                    onClick={() => refetch()}
+                    className="mt-2 flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 shadow-sm rounded-full text-xs text-gray-600 hover:text-indigo-600 hover:border-indigo-200 transition-all"
+                >
+                    <ArrowPathIcon className="h-3 w-3" />
+                    <span>再試行</span>
+                </button>
             </div>
         );
     }
 
+    // --- 3. Success State (データ表示) ---
     const { progress, tasks } = data;
     
     // 円グラフ計算

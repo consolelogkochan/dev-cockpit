@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    // ▼▼▼ ここに追加 ▼▼▼
+    'project_lite' => [
+        'url' => env('PROJECT_LITE_API_URL'),
+    ],
+
 ];

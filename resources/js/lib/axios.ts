@@ -3,8 +3,8 @@ import toast from 'react-hot-toast';
 
 // Axiosのインスタンスを作成
 const client = axios.create({
-    // ▼ 環境変数(VITE_APP_URL)があればそれを使い、なければ localhost を使う設定に変更
-    baseURL: 'http://dev-cockpit.ikshowcase.site',
+    // 環境変数(VITE_APP_URL)があればそれを使い、なければ localhost を使う
+    baseURL: import.meta.env.VITE_APP_URL || 'http://localhost',
     headers: {
         'X-Requested-With': 'XMLHttpRequest', // Ajax通信であることを明示
     },
