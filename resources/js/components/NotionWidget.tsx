@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react'; // useEffect, useState 削除
 import { 
     DocumentTextIcon, 
     ArrowTopRightOnSquareIcon, 
-    BookOpenIcon 
+    BookOpenIcon,
+    ArrowPathIcon,
+    ExclamationTriangleIcon 
 } from '@heroicons/react/24/outline';
 import client from '../lib/axios';
+import { useQuery } from '@tanstack/react-query'; // ★追加
 
 type Props = {
     projectId: number;
@@ -36,23 +39,22 @@ const timeAgo = (dateString: string) => {
     return date.toLocaleDateString();
 };
 
-const NotionWidget = ({ projectId }: Props) => {
-    const [pages, setPages] = useState<NotionPage[]>([]);
-    const [loading, setLoading] = useState(true);
+// Fetcher関数
+const fetchNotionData = async (projectId: number) => {
+    const response = await client.get(`/api/projects/${projectId}/notion`);
+    return response.data.pages as NotionPage[];
+};
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await client.get(`/api/projects/${projectId}/notion`);
-                setPages(response.data.pages);
-            } catch (e) {
-                console.error("Notion data fetch failed", e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [projectId]);
+const NotionWidget = ({ projectId }: Props) => {
+    // ★ useQuery化
+    const { data: pages, isLoading, isError, refetch } = useQuery({
+        queryKey: ['notion', projectId],
+        queryFn: () => fetchNotionData(projectId),
+        enabled: !!projectId,
+        // バックエンド側で1時間キャッシュしているので、フロントも少し長めに持つ
+        staleTime: 1000 * 60 * 10, 
+        retry: 1,
+    });
 
     const getPageTitle = (properties: any) => {
         for (const key in properties) {
@@ -74,15 +76,47 @@ const NotionWidget = ({ projectId }: Props) => {
         return <DocumentTextIcon className="h-4 w-4 text-gray-400" />;
     };
 
-    if (loading) {
+    // --- Loading Skeleton ---
+    if (isLoading) {
         return (
-            <div className="h-full flex flex-col justify-center items-center text-gray-400 animate-pulse">
-                <DocumentTextIcon className="h-8 w-8 mb-2 opacity-50" />
-                <span className="text-xs">Loading Wiki...</span>
+            <div className="flex flex-col h-full relative animate-pulse">
+                <div className="mb-3 flex items-center gap-2">
+                    <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                    <div className="h-3 w-24 bg-gray-200 rounded"></div>
+                </div>
+                <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center p-2.5 rounded border border-gray-100">
+                            <div className="mr-3 w-6 h-6 bg-gray-200 rounded-sm"></div>
+                            <div className="flex-1 space-y-2">
+                                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                                <div className="h-2 bg-gray-200 rounded w-1/3"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
 
+    // --- Error State ---
+    if (isError || !pages) {
+        return (
+            <div className="h-full flex flex-col justify-center items-center text-gray-400 bg-gray-50/50 rounded border border-dashed border-gray-200 p-4">
+                <ExclamationTriangleIcon className="h-6 w-6 mb-1 text-gray-300" />
+                <p className="text-xs mb-2">Wiki取得エラー</p>
+                <button 
+                    onClick={() => refetch()}
+                    className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 shadow-sm rounded-full text-xs text-gray-600 hover:text-indigo-600 transition-all"
+                >
+                    <ArrowPathIcon className="h-3 w-3" />
+                    <span>再試行</span>
+                </button>
+            </div>
+        );
+    }
+
+    // Empty State
     if (pages.length === 0) {
         return (
             <div className="h-full flex flex-col justify-center items-center text-gray-400 bg-gray-50 rounded border border-dashed p-4">

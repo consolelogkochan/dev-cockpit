@@ -324,39 +324,59 @@ class ProjectController extends Controller
             return response()->json(['pages' => []]);
         }
 
+        // 2. Configから設定取得
+        $token = config('services.notion.token');
+        $version = config('services.notion.version');
+
+        if (empty($token)) {
+            Log::critical('Notion Token is not configured.');
+            return response()->json(['message' => 'Server Configuration Error'], 500);
+        }
+
         // ★キャッシュキーの生成 (プロジェクトごとにユニーク)
         $cacheKey = "project_{$project->id}_notion_info";
 
         // ★ Cache::remember でラップする
         // 第2引数は保存期間(秒)。ここでは 3600秒 = 1時間 とします。
         // キャッシュがあればそれを返し、なければ中の処理を実行して保存します。
-        $results = Cache::remember($cacheKey, 3600, function () use ($project) {
+        $results = Cache::remember($cacheKey, 3600, function () use ($project, $token, $version) {
             
-            $token = env('NOTION_API_TOKEN');
-            $version = env('NOTION_VERSION', '2022-06-28');
             $data = [];
 
-            foreach ($project->notionPages as $page) {
-                // APIリクエスト
-                $response = Http::withToken($token)
-                    ->withHeaders(['Notion-Version' => $version])
-                    ->get("https://api.notion.com/v1/pages/{$page->page_id}");
+            // HTTPクライアントの共通設定
+            $http = Http::withToken($token)
+                ->withHeaders(['Notion-Version' => $version])
+                ->timeout(5); // 1ページあたりのタイムアウト
 
-                if ($response->successful()) {
-                    $json = $response->json();
-                    $data[] = [
-                        'id' => $json['id'],
-                        'url' => $json['url'],
-                        'icon' => $json['icon'] ?? null,
-                        'cover' => $json['cover'] ?? null,
-                        'last_edited_time' => $json['last_edited_time'],
-                        'properties' => $json['properties'] ?? [],
-                    ];
-                } else {
+            foreach ($project->notionPages as $page) {
+                try {
+                    $response = $http->get("https://api.notion.com/v1/pages/{$page->page_id}");
+
+                    if ($response->successful()) {
+                        $json = $response->json();
+                        $data[] = [
+                            'id' => $json['id'],
+                            'url' => $json['url'],
+                            'icon' => $json['icon'] ?? null,
+                            'last_edited_time' => $json['last_edited_time'],
+                            'properties' => $json['properties'] ?? [],
+                        ];
+                    } else {
+                        // 特定のページだけ見られない(404/403)場合は、リストから除外せずエラー情報を入れておく
+                        Log::warning("Notion Page Fetch Failed: {$page->page_id}", [
+                            'status' => $response->status()
+                        ]);
+                        $data[] = [
+                            'id' => $page->page_id,
+                            'error' => 'Access denied or Not found',
+                            'status' => $response->status(),
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Notion Connection Error: {$page->page_id} - " . $e->getMessage());
                     $data[] = [
                         'id' => $page->page_id,
-                        'error' => 'Access denied or Not found',
-                        'status' => $response->status(),
+                        'error' => 'Connection Error',
                     ];
                 }
             }

@@ -47,5 +47,10 @@ return [
     'github' => [
         'token' => env('GITHUB_TOKEN'),
     ],
+    // ★追加: Notion設定
+    'notion' => [
+        'token' => env('NOTION_API_TOKEN'),
+        'version' => env('NOTION_VERSION', '2022-06-28'),
+    ],
 
 ];
