@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react'; // useEffect, useState 削除
 import { 
-    CommandLineIcon, 
     StarIcon, 
     ArrowTopRightOnSquareIcon,
-    UserCircleIcon 
+    UserCircleIcon,
+    ArrowPathIcon,
+    ExclamationTriangleIcon,
+    CommandLineIcon 
 } from '@heroicons/react/24/outline';
 import client from '../lib/axios';
+import { useQuery } from '@tanstack/react-query'; // ★追加
 
 type Props = {
     projectId: number;
@@ -45,40 +48,72 @@ const timeAgo = (dateString: string) => {
     return date.toLocaleDateString(); // 1週間以上前なら日付
 };
 
+// Fetcher関数
+const fetchGithubData = async (projectId: number) => {
+    const response = await client.get(`/api/projects/${projectId}/github`);
+    return response.data as GithubData;
+};
+
 const GithubWidget = ({ projectId, repoName }: Props) => {
-    const [data, setData] = useState<GithubData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
+    // ★ useQuery化
+    const { data, isLoading, isError, refetch } = useQuery({
+        queryKey: ['github', projectId],
+        queryFn: () => fetchGithubData(projectId),
+        enabled: !!projectId && !!repoName,
+        // ★重要: GitHub APIはレート制限があるため、キャッシュ時間を長くする(10分)
+        staleTime: 1000 * 60 * 10, 
+        retry: 1,
+    });
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await client.get(`/api/projects/${projectId}/github`);
-                setData(response.data);
-            } catch (e) {
-                console.error("GitHub data fetch failed", e);
-                setError(true);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [projectId]);
-
-    if (loading) {
+    // --- Loading Skeleton (タイムライン風) ---
+    if (isLoading) {
         return (
-            <div className="h-full flex flex-col justify-center items-center text-gray-400 animate-pulse">
-                <CommandLineIcon className="h-8 w-8 mb-2 opacity-50" />
-                <span className="text-xs">Loading...</span>
+            <div className="flex flex-col h-full relative animate-pulse">
+                {/* Header Skeleton */}
+                <div className="mb-4 pr-6">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-4 w-8 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="h-3 bg-gray-200 rounded w-full mb-1"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+
+                {/* Timeline Skeleton */}
+                <div className="flex-1 pl-1">
+                    <div className="h-3 w-20 bg-gray-200 rounded mb-3"></div>
+                    <div className="relative space-y-4 pl-5">
+                        <div className="absolute top-0 bottom-0 left-1.5 w-px bg-gray-100"></div>
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="relative">
+                                <div className="absolute top-1.5 -left-3.75 w-2 h-2 rounded-full bg-gray-200 ring-2 ring-white"></div>
+                                <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                                <div className="flex justify-between">
+                                    <div className="h-2 bg-gray-200 rounded w-10"></div>
+                                    <div className="h-2 bg-gray-200 rounded w-10"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
 
-    if (error || !data) {
+    // --- Error State ---
+    if (isError || !data) {
         return (
-            <div className="h-full flex flex-col justify-center items-center text-gray-400 bg-gray-50 rounded border border-dashed p-4">
-                <p className="text-xs">リポジトリ情報の取得失敗</p>
-                <p className="text-[10px] text-gray-300 mt-1">リポジトリ名が正しいか確認してください</p>
+            <div className="h-full flex flex-col justify-center items-center text-gray-400 bg-gray-50/50 rounded border border-dashed border-gray-200 p-4">
+                <CommandLineIcon className="h-6 w-6 mb-2 text-gray-300" />
+                <p className="text-xs mb-1">リポジトリ情報の取得失敗</p>
+                <p className="text-[10px] text-gray-300 mb-2">リポジトリ名を確認してください</p>
+                <button 
+                    onClick={() => refetch()}
+                    className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 shadow-sm rounded-full text-xs text-gray-600 hover:text-indigo-600 transition-all"
+                >
+                    <ArrowPathIcon className="h-3 w-3" />
+                    <span>再試行</span>
+                </button>
             </div>
         );
     }

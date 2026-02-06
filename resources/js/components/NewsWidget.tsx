@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react'; // useEffect, useState 削除
 import { 
     NewspaperIcon, 
     ArrowTopRightOnSquareIcon,
     UserCircleIcon,
-    ClockIcon
+    ClockIcon,
+    ArrowPathIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import client from '../lib/axios';
+import { useQuery } from '@tanstack/react-query'; // ★追加
 
 type Article = {
     title: string;
@@ -28,37 +31,66 @@ const timeAgo = (dateString: string) => {
     return date.toLocaleDateString();
 };
 
+// Fetcher関数
+const fetchNews = async () => {
+    const response = await client.get('/api/news');
+    return response.data.articles as Article[];
+};
+
 const NewsWidget = () => {
-    const [articles, setArticles] = useState<Article[]>([]);
-    const [loading, setLoading] = useState(true);
+    // ★ useQuery化
+    const { data: articles, isLoading, isError, refetch } = useQuery({
+        queryKey: ['news'], 
+        queryFn: fetchNews,
+        staleTime: 1000 * 60 * 30, // ニュースは頻繁に変わらないので30分キャッシュ
+        retry: 1,
+    });
 
-    useEffect(() => {
-        const fetchNews = async () => {
-            try {
-                const response = await client.get('/api/news');
-                setArticles(response.data.articles);
-            } catch (error) {
-                console.error("News fetch failed", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchNews();
-    }, []);
-
-    if (loading) {
+    // Loading Skeleton (ProjectLiteWidgetとトーンを合わせる)
+    if (isLoading) {
         return (
-            <div className="h-full flex flex-col justify-center items-center text-gray-400 animate-pulse">
-                <NewspaperIcon className="h-8 w-8 mb-2 opacity-50" />
-                <span className="text-xs">Loading Trends...</span>
+            <div className="flex flex-col h-full relative animate-pulse">
+                <div className="mb-3 flex items-center gap-2">
+                    <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                    <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                </div>
+                <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex gap-3">
+                            <div className="shrink-0 w-12 h-12 bg-gray-200 rounded"></div>
+                            <div className="flex-1 space-y-2">
+                                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                                <div className="h-2 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
 
+    // Error State
+    if (isError || !articles) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded border border-dashed border-gray-200 p-4">
+                <ExclamationTriangleIcon className="h-6 w-6 mb-1 text-gray-300" />
+                <p className="text-xs mb-2">ニュース取得エラー</p>
+                <button 
+                    onClick={() => refetch()}
+                    className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 shadow-sm rounded-full text-xs text-gray-600 hover:text-indigo-600 transition-all"
+                >
+                    <ArrowPathIcon className="h-3 w-3" />
+                    <span>再試行</span>
+                </button>
+            </div>
+        );
+    }
+
+    // Empty State
     if (articles.length === 0) {
         return (
             <div className="h-full flex flex-col justify-center items-center text-gray-400 bg-gray-50 rounded border border-dashed p-4">
-                <p className="text-xs">記事を取得できませんでした</p>
+                <p className="text-xs">記事がありません</p>
             </div>
         );
     }

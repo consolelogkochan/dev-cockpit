@@ -39,5 +39,13 @@ return [
     'project_lite' => [
         'url' => env('PROJECT_LITE_API_URL'),
     ],
+    // ★追加: Zennの設定
+    'zenn' => [
+        'rss_url' => 'https://zenn.dev/feed',
+    ],
+    // ★追加: GitHub設定
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+    ],
 
 ];

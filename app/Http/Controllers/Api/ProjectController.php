@@ -256,29 +256,60 @@ class ProjectController extends Controller
             return response()->json(['message' => 'GitHub repository not linked'], 404);
         }
 
-        // 2. 環境変数からトークンを取得
-        $token = env('GITHUB_TOKEN');
+        // 2. Configからトークン取得
+        $token = config('services.github.token');
 
-        // 3. GitHub APIを叩く (リポジトリ情報の取得)
-        // URL例: https://api.github.com/repos/laravel/laravel
-        $repoResponse = Http::withToken($token)->get("https://api.github.com/repos/{$project->github_repo}");
-
-        // 4. GitHub APIを叩く (コミット履歴の取得 - 最新5件)
-        // URL例: https://api.github.com/repos/laravel/laravel/commits
-        $commitsResponse = Http::withToken($token)->get("https://api.github.com/repos/{$project->github_repo}/commits", [
-            'per_page' => 5, // 最新5件だけ取得
-        ]);
-
-        // 5. エラーハンドリング (リポジトリが見つからない場合など)
-        if ($repoResponse->failed()) {
-            return response()->json(['message' => 'GitHub repository not found'], 404);
+        // トークン設定漏れチェック (ログレベル: Critical)
+        if (empty($token)) {
+            Log::critical('GitHub Token is not configured.');
+            return response()->json(['message' => 'Server Configuration Error'], 500);
         }
 
-        // 6. 必要なデータだけを整形して返す
-        return response()->json([
-            'repo' => $repoResponse->json(),       // リポジトリの基本情報 (Star数など)
-            'commits' => $commitsResponse->json() // コミット履歴
-        ]);
+        try {
+            // 3. APIリクエスト設定 (共通化)
+            // GitHub APIはたまに遅いので、タイムアウトは少し長めの10秒に設定
+            $http = Http::withToken($token)
+                ->timeout(10)
+                ->withHeaders(['Accept' => 'application/vnd.github.v3+json']);
+
+            // 4. 並列リクエスト (本来は Http::pool が推奨ですが、今回は順次実行で堅実にいきます)
+            
+            // A. リポジトリ情報の取得
+            $repoResponse = $http->get("https://api.github.com/repos/{$project->github_repo}");
+
+            if ($repoResponse->failed()) {
+                Log::warning('GitHub Repo Fetch Failed', [
+                    'repo' => $project->github_repo,
+                    'status' => $repoResponse->status()
+                ]);
+                return response()->json(['message' => 'Repository not found or access denied'], $repoResponse->status());
+            }
+
+            // B. コミット履歴の取得 (最新5件)
+            $commitsResponse = $http->get("https://api.github.com/repos/{$project->github_repo}/commits", [
+                'per_page' => 5,
+            ]);
+
+            // コミット取得失敗は、リポジトリが生きていれば空配列として返す(画面を落とさない)運用もアリですが、
+            // 今回はエラーとして扱います
+            if ($commitsResponse->failed()) {
+                Log::warning('GitHub Commits Fetch Failed', ['repo' => $project->github_repo]);
+                // コミットだけ取れない場合は空で返すフォールバック戦略
+                $commitsData = []; 
+            } else {
+                $commitsData = $commitsResponse->json();
+            }
+
+            // 5. データ返却
+            return response()->json([
+                'repo' => $repoResponse->json(),
+                'commits' => $commitsData
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('GitHub API Exception: ' . $e->getMessage());
+            return response()->json(['message' => 'Service Unavailable'], 503);
+        }
     }
 
     /**
@@ -341,24 +372,39 @@ class ProjectController extends Controller
     public function getNews()
     {
         // ZennのテックトレンドのRSS
-        $rssUrl = 'https://zenn.dev/feed';
+        // ★修正: Configから取得 (第2引数はデフォルト値)
+        $rssUrl = config('services.zenn.rss_url', 'https://zenn.dev/feed');
 
         try {
             // 1. RSSデータを取得 (XML形式の文字列)
-            $response = Http::get($rssUrl);
+            // HTTPリクエスト (タイムアウト5秒)
+            $response = Http::timeout(5)->get($rssUrl);
             
             if ($response->failed()) {
-                return response()->json(['error' => 'Failed to fetch RSS'], 500);
+                // ★追加: ログ記録
+                Log::warning('Zenn RSS Fetch Failed', ['status' => $response->status()]);
+                return response()->json(['error' => 'Failed to fetch RSS'], 502); // 502 Bad Gateway
             }
 
             // 2. XML文字列をPHPのオブジェクトに変換
-            $xml = simplexml_load_string($response->body());
+            // simplexml_load_string は失敗時に false を返すのでチェック
+            $xml = @simplexml_load_string($response->body()); // @でWarning抑制
+
+            if ($xml === false) {
+                 Log::error('Zenn RSS Parse Error: Invalid XML');
+                 return response()->json(['error' => 'Invalid RSS format'], 500);
+            }
             
             // 3. JSONに変換して返すためにデータを整形
             $articles = [];
+            $count = 0;
+
+            // channel->item が存在しない場合のガード
+            if (!isset($xml->channel->item)) {
+                return response()->json(['articles' => []]);
+            }
             
             // 記事は <item> タグの中にある (上位5件だけ取得)
-            $count = 0;
             foreach ($xml->channel->item as $item) {
                 if ($count >= 5) break;
 
@@ -372,7 +418,8 @@ class ProjectController extends Controller
                 $articles[] = [
                     'title' => (string)$item->title,
                     'link' => (string)$item->link,
-                    'pubDate' => date('Y-m-d', strtotime((string)$item->pubDate)),
+                    // 日付変換エラー対策
+                    'pubDate' => (string)$item->pubDate ? date('Y-m-d', strtotime((string)$item->pubDate)) : '',
                     'creator' => $dc ? (string)$dc->creator : '',
                     'thumbnail' => $imageUrl,
                 ];
@@ -382,8 +429,9 @@ class ProjectController extends Controller
             return response()->json(['articles' => $articles]);
 
         } catch (\Exception $e) {
-            // パースエラーなど
-            return response()->json(['error' => $e->getMessage()], 500);
+            // ★追加: 例外ログ
+            Log::error('News Fetch Exception: ' . $e->getMessage());
+            return response()->json(['error' => 'Service Unavailable'], 503);
         }
     }
 
