@@ -52,5 +52,8 @@ return [
         'token' => env('NOTION_API_TOKEN'),
         'version' => env('NOTION_VERSION', '2022-06-28'),
     ],
+    'frontend' => [
+        'url' => env('FRONTEND_URL', 'http://localhost:3000'), // デフォルト値も設定
+    ],
 
 ];

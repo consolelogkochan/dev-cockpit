@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model; // ★この行を追加！
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Models\NotionPage;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int|null $pl_board_id
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\NotionPage[] $notionPages
+ */
 class Project extends Model
 {
     use HasFactory;
@@ -25,7 +30,7 @@ class Project extends Model
     ];
 
     // ▼ ★追加: Notionページとの1対多リレーション
-    public function notionPages()
+    public function notionPages(): HasMany
     {
         return $this->hasMany(NotionPage::class);
     }
@@ -49,8 +54,8 @@ class Project extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'project_user')
-                    ->withPivot('role') // 中間テーブルの role も取得
-                    ->withTimestamps();
+            ->withPivot('role') // 中間テーブルの role も取得
+            ->withTimestamps();
     }
 
     /**
@@ -58,7 +63,7 @@ class Project extends Model
      */
     public function setFigmaFileKeyAttribute($value)
     {
-        /// 修正前: '/\/file\/([a-zA-Z0-9]+)/'
+        // / 修正前: '/\/file\/([a-zA-Z0-9]+)/'
         // 修正後: 'file' または 'design' のどちらがきてもOKにする
         if (preg_match('/\/(?:file|design)\/([a-zA-Z0-9]+)/', $value, $matches)) {
             $this->attributes['figma_file_key'] = $matches[1];

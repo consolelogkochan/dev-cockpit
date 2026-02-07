@@ -45,10 +45,10 @@ class InvitationController extends Controller
 
         return response()->json([
             'message' => '招待コードを発行しました。',
-            'data' => $invitation
+            'data' => $invitation,
         ], 201);
     }
-    
+
     /**
      * 招待コードの削除（オプション）
      * 間違って発行した場合などのために実装しておくと便利です

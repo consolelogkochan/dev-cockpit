@@ -1,9 +1,9 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Artisan;
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 
 // ▼▼▼ 1. 先に特定のルート（セットアップ用）を書く ▼▼▼
 Route::get('/setup-production-999', function () {
@@ -17,24 +17,24 @@ Route::get('/setup-production-999', function () {
     // 2. ストレージリンク作成
     try {
         Artisan::call('storage:link');
-        $output .= 'Storage Link Created: ' . Artisan::output() . '<br>';
+        $output .= 'Storage Link Created: '.Artisan::output().'<br>';
     } catch (\Exception $e) {
-        $output .= 'Storage Link Error: ' . $e->getMessage() . '<br>';
+        $output .= 'Storage Link Error: '.$e->getMessage().'<br>';
     }
 
     // 3. マイグレーション実行
     try {
         Artisan::call('migrate', ['--force' => true]);
-        $output .= 'Migration: <br><pre>' . Artisan::output() . '</pre><br>';
+        $output .= 'Migration: <br><pre>'.Artisan::output().'</pre><br>';
     } catch (\Exception $e) {
-        return 'Migration Error: ' . $e->getMessage();
+        return 'Migration Error: '.$e->getMessage();
     }
 
     // 4. 管理者アカウントの作成
-    $adminEmail = 'ik.tenzan.096@gmail.com'; 
-    $adminPass  = 'Iktoloveru096';
+    $adminEmail = 'ik.tenzan.096@gmail.com';
+    $adminPass = 'Iktoloveru096';
 
-    if (!User::where('email', $adminEmail)->exists()) {
+    if (! User::where('email', $adminEmail)->exists()) {
         User::create([
             'name' => 'Admin User',
             'email' => $adminEmail,
@@ -43,10 +43,10 @@ Route::get('/setup-production-999', function () {
         ]);
         $output .= "Admin User Created ($adminEmail).<br>";
     } else {
-        $output .= "Admin User already exists.<br>";
+        $output .= 'Admin User already exists.<br>';
     }
 
-    return $output . '<br>Done!';
+    return $output.'<br>Done!';
 });
 
 // ▼▼▼ 2. 最後に「それ以外全部」を受け取るルートを書く ▼▼▼

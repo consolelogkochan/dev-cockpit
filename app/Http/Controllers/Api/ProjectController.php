@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Project;
 use App\Http\Resources\ProjectResource;
-use Illuminate\Http\Request;
-use Illuminate\Database\Eloquent\Builder;
 use App\Models\NotionPage;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Cache;
+use App\Models\Project;
 use App\Traits\UploadsImages;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ProjectController extends Controller
 {
@@ -28,7 +28,7 @@ class ProjectController extends Controller
             $value = $request->get('search');
             $query->where(function (Builder $q) use ($value) {
                 $q->where('title', 'like', "%{$value}%")
-                  ->orWhere('description', 'like', "%{$value}%");
+                    ->orWhere('description', 'like', "%{$value}%");
             });
         }
 
@@ -46,11 +46,13 @@ class ProjectController extends Controller
      */
     private function extractGitHubRepo(?string $url): ?string
     {
-        if (empty($url)) return null;
+        if (empty($url)) {
+            return null;
+        }
 
         // すでに "user/repo" の形式ならそのまま返す
-        if (!str_contains($url, 'github.com')) {
-            return $url; 
+        if (! str_contains($url, 'github.com')) {
+            return $url;
         }
 
         // 正規表現で抽出
@@ -65,7 +67,9 @@ class ProjectController extends Controller
      */
     private function extractFigmaKey(?string $url): ?string
     {
-        if (empty($url)) return null;
+        if (empty($url)) {
+            return null;
+        }
 
         // 修正前: '/figma\.com\/file\/([0-9a-zA-Z]+)/'
         // ▼▼▼ 修正後: 'file' または 'design' に対応させる ▼▼▼
@@ -95,7 +99,7 @@ class ProjectController extends Controller
         // ▼▼▼ 追加: IDの抽出処理 ▼▼▼
         if ($request->has('pl_board_id')) {
             $request->merge([
-                'pl_board_id' => $this->extractBoardId($request->pl_board_id)
+                'pl_board_id' => $this->extractBoardId($request->pl_board_id),
             ]);
         }
 
@@ -110,7 +114,7 @@ class ProjectController extends Controller
 
         // 2. トランザクション開始 (失敗したら全部なかったことにする)
         return DB::transaction(function () use ($validated, $request) {
-            
+
             // プロジェクト作成
             $project = Project::create([
                 // ログイン中のユーザーIDを入れる (auth()->id())
@@ -122,16 +126,16 @@ class ProjectController extends Controller
 
                 // ★修正: $validated ではなく、$request から取得する
                 'pl_board_id' => $request->pl_board_id,
-                
+
                 // さっき作ったメソッドでIDだけ抽出して保存
                 'github_repo' => $this->extractGitHubRepo($validated['github_repo']),
                 'figma_file_key' => $this->extractFigmaKey($validated['figma_file_key']),
             ]);
 
             // Notionページの保存 (配列をループして保存)
-            if (!empty($validated['notion_pages'])) {
+            if (! empty($validated['notion_pages'])) {
                 foreach ($validated['notion_pages'] as $page) {
-                    if (!empty($page['id'])) {
+                    if (! empty($page['id'])) {
                         NotionPage::create([
                             'project_id' => $project->id,
                             'page_id' => $page['id'],
@@ -183,10 +187,10 @@ class ProjectController extends Controller
         // ▼▼▼ 追加: IDの抽出処理 ▼▼▼
         if ($request->has('pl_board_id')) {
             $request->merge([
-                'pl_board_id' => $this->extractBoardId($request->pl_board_id)
+                'pl_board_id' => $this->extractBoardId($request->pl_board_id),
             ]);
         }
-        
+
         // ★追加: 画像アップロード処理
         if ($request->hasFile('thumbnail_file')) {
             // 古い画像がローカルファイルなら削除する (任意)
@@ -219,7 +223,7 @@ class ProjectController extends Controller
 
                 // 新しいリストを作成
                 foreach ($validated['notion_pages'] as $page) {
-                    if (!empty($page['id'])) {
+                    if (! empty($page['id'])) {
                         $project->notionPages()->create([
                             'page_id' => $page['id'],
                         ]);
@@ -262,6 +266,7 @@ class ProjectController extends Controller
         // トークン設定漏れチェック (ログレベル: Critical)
         if (empty($token)) {
             Log::critical('GitHub Token is not configured.');
+
             return response()->json(['message' => 'Server Configuration Error'], 500);
         }
 
@@ -273,15 +278,16 @@ class ProjectController extends Controller
                 ->withHeaders(['Accept' => 'application/vnd.github.v3+json']);
 
             // 4. 並列リクエスト (本来は Http::pool が推奨ですが、今回は順次実行で堅実にいきます)
-            
+
             // A. リポジトリ情報の取得
             $repoResponse = $http->get("https://api.github.com/repos/{$project->github_repo}");
 
             if ($repoResponse->failed()) {
                 Log::warning('GitHub Repo Fetch Failed', [
                     'repo' => $project->github_repo,
-                    'status' => $repoResponse->status()
+                    'status' => $repoResponse->status(),
                 ]);
+
                 return response()->json(['message' => 'Repository not found or access denied'], $repoResponse->status());
             }
 
@@ -295,7 +301,7 @@ class ProjectController extends Controller
             if ($commitsResponse->failed()) {
                 Log::warning('GitHub Commits Fetch Failed', ['repo' => $project->github_repo]);
                 // コミットだけ取れない場合は空で返すフォールバック戦略
-                $commitsData = []; 
+                $commitsData = [];
             } else {
                 $commitsData = $commitsResponse->json();
             }
@@ -303,11 +309,12 @@ class ProjectController extends Controller
             // 5. データ返却
             return response()->json([
                 'repo' => $repoResponse->json(),
-                'commits' => $commitsData
+                'commits' => $commitsData,
             ]);
 
         } catch (\Exception $e) {
-            Log::error('GitHub API Exception: ' . $e->getMessage());
+            Log::error('GitHub API Exception: '.$e->getMessage());
+
             return response()->json(['message' => 'Service Unavailable'], 503);
         }
     }
@@ -319,7 +326,7 @@ class ProjectController extends Controller
     {
         // 1. 紐付いているNotionページIDを取得
         $project->load('notionPages');
-        
+
         if ($project->notionPages->isEmpty()) {
             return response()->json(['pages' => []]);
         }
@@ -330,6 +337,7 @@ class ProjectController extends Controller
 
         if (empty($token)) {
             Log::critical('Notion Token is not configured.');
+
             return response()->json(['message' => 'Server Configuration Error'], 500);
         }
 
@@ -340,7 +348,7 @@ class ProjectController extends Controller
         // 第2引数は保存期間(秒)。ここでは 3600秒 = 1時間 とします。
         // キャッシュがあればそれを返し、なければ中の処理を実行して保存します。
         $results = Cache::remember($cacheKey, 3600, function () use ($project, $token, $version) {
-            
+
             $data = [];
 
             // HTTPクライアントの共通設定
@@ -348,6 +356,7 @@ class ProjectController extends Controller
                 ->withHeaders(['Notion-Version' => $version])
                 ->timeout(5); // 1ページあたりのタイムアウト
 
+            /** @var \App\Models\NotionPage $page */
             foreach ($project->notionPages as $page) {
                 try {
                     $response = $http->get("https://api.notion.com/v1/pages/{$page->page_id}");
@@ -364,7 +373,7 @@ class ProjectController extends Controller
                     } else {
                         // 特定のページだけ見られない(404/403)場合は、リストから除外せずエラー情報を入れておく
                         Log::warning("Notion Page Fetch Failed: {$page->page_id}", [
-                            'status' => $response->status()
+                            'status' => $response->status(),
                         ]);
                         $data[] = [
                             'id' => $page->page_id,
@@ -373,13 +382,14 @@ class ProjectController extends Controller
                         ];
                     }
                 } catch (\Exception $e) {
-                    Log::error("Notion Connection Error: {$page->page_id} - " . $e->getMessage());
+                    Log::error("Notion Connection Error: {$page->page_id} - ".$e->getMessage());
                     $data[] = [
                         'id' => $page->page_id,
                         'error' => 'Connection Error',
                     ];
                 }
             }
+
             return $data;
         });
 
@@ -399,10 +409,11 @@ class ProjectController extends Controller
             // 1. RSSデータを取得 (XML形式の文字列)
             // HTTPリクエスト (タイムアウト5秒)
             $response = Http::timeout(5)->get($rssUrl);
-            
+
             if ($response->failed()) {
                 // ★追加: ログ記録
                 Log::warning('Zenn RSS Fetch Failed', ['status' => $response->status()]);
+
                 return response()->json(['error' => 'Failed to fetch RSS'], 502); // 502 Bad Gateway
             }
 
@@ -411,36 +422,40 @@ class ProjectController extends Controller
             $xml = @simplexml_load_string($response->body()); // @でWarning抑制
 
             if ($xml === false) {
-                 Log::error('Zenn RSS Parse Error: Invalid XML');
-                 return response()->json(['error' => 'Invalid RSS format'], 500);
+                Log::error('Zenn RSS Parse Error: Invalid XML');
+
+                return response()->json(['error' => 'Invalid RSS format'], 500);
             }
-            
+
             // 3. JSONに変換して返すためにデータを整形
             $articles = [];
             $count = 0;
 
             // channel->item が存在しない場合のガード
-            if (!isset($xml->channel->item)) {
+            if (! isset($xml->channel->item)) {
                 return response()->json(['articles' => []]);
             }
-            
+
             // 記事は <item> タグの中にある (上位5件だけ取得)
             foreach ($xml->channel->item as $item) {
-                if ($count >= 5) break;
+                if ($count >= 5) {
+                    break;
+                }
 
                 // 名前空間 (dc:creator や media:content など) を扱うための準備
                 $namespaces = $item->getNameSpaces(true);
                 $dc = $item->children($namespaces['dc'] ?? null);
-                
+
                 // 画像URLの取得トライ (RSSの構造によるので簡易的に)
-                $imageUrl = (string)$item->enclosure['url'] ?? null;
+                /** @phpstan-ignore-next-line */
+                $imageUrl = (string) $item->enclosure['url'] ?? null;
 
                 $articles[] = [
-                    'title' => (string)$item->title,
-                    'link' => (string)$item->link,
+                    'title' => (string) $item->title,
+                    'link' => (string) $item->link,
                     // 日付変換エラー対策
-                    'pubDate' => (string)$item->pubDate ? date('Y-m-d', strtotime((string)$item->pubDate)) : '',
-                    'creator' => $dc ? (string)$dc->creator : '',
+                    'pubDate' => (string) $item->pubDate ? date('Y-m-d', strtotime((string) $item->pubDate)) : '',
+                    'creator' => $dc ? (string) $dc->creator : '',
                     'thumbnail' => $imageUrl,
                 ];
                 $count++;
@@ -450,7 +465,8 @@ class ProjectController extends Controller
 
         } catch (\Exception $e) {
             // ★追加: 例外ログ
-            Log::error('News Fetch Exception: ' . $e->getMessage());
+            Log::error('News Fetch Exception: '.$e->getMessage());
+
             return response()->json(['error' => 'Service Unavailable'], 503);
         }
     }
@@ -461,7 +477,9 @@ class ProjectController extends Controller
     private function extractBoardId($value)
     {
         // 空ならnull
-        if (empty($value)) return null;
+        if (empty($value)) {
+            return null;
+        }
 
         // URL形式 (.../boards/123...) から数字を抽出
         if (preg_match('/\/boards\/(\d+)/', $value, $matches)) {

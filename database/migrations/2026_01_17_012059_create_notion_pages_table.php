@@ -17,7 +17,7 @@ return new class extends Migration
 
             // NotionのページID (例: 1a2b3c...)
             $table->string('page_id');
-            
+
             // 将来用: メモや識別名を入れられるようにしておく（今回は使わなくてもOK）
             $table->string('title')->nullable();
 

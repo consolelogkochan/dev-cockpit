@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
+use App\Models\Invitation;
 use App\Models\User;
-use App\Models\Invitation; // ★追加
-use Illuminate\Auth\Events\Registered; // ★追加
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password; // ★追加
-use Illuminate\Support\Str;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth; // ★追加
+use Illuminate\Support\Facades\Hash; // ★追加
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str; // ★追加
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -83,22 +83,24 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            
+
             // ★追加: 招待コードの検証ロジック
             'invitation_code' => [
-                'required', 
-                'string', 
+                'required',
+                'string',
                 'exists:invitations,code', // invitationsテーブルに存在するか
                 function ($attribute, $value, $fail) {
                     $invitation = Invitation::where('code', $value)->first();
-                    
-                    if (!$invitation) return;
+
+                    if (! $invitation) {
+                        return;
+                    }
 
                     // 使用済みチェック
                     if ($invitation->is_used) {
                         $fail('この招待コードは既に使用されています。');
                     }
-                    
+
                     // 有効期限チェック
                     if ($invitation->expires_at && $invitation->expires_at->isPast()) {
                         $fail('この招待コードは有効期限切れです。');
@@ -138,27 +140,27 @@ class AuthController extends Controller
         $user = User::findOrFail($id);
 
         // URLの署名(改ざん防止)チェック
-        if (!$request->hasValidSignature()) {
+        if (! $request->hasValidSignature()) {
             return response()->json(['message' => 'Invalid or expired URL.'], 401);
         }
 
         // 既に認証済みの場合
         if ($user->hasVerifiedEmail()) {
-            // フロントエンドのログイン画面へリダイレクト (メッセージ付き)
-            return redirect(env('FRONTEND_URL') . '/login?verified=already');
+            // ★修正: config経由に変更
+            return redirect(config('services.frontend.url').'/login?verified=already');
         }
 
         // 認証完了処理
         if ($user->markEmailAsVerified()) {
             // ★ここで is_active も true にする
             $user->forceFill(['is_active' => true])->save();
-            
+
             // 認証完了イベント発火
             event(new \Illuminate\Auth\Events\Verified($user));
         }
 
-        // フロントエンドのログイン画面へリダイレクト
-        return redirect(env('FRONTEND_URL') . '/login?verified=success');
+        // ★修正: config経由に変更
+        return redirect(config('services.frontend.url').'/login?verified=success');
     }
 
     /**
@@ -199,7 +201,7 @@ class AuthController extends Controller
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
                 $user->forceFill([
-                    'password' => Hash::make($password)
+                    'password' => Hash::make($password),
                 ])->setRememberToken(Str::random(60));
 
                 $user->save();

@@ -30,9 +30,10 @@ class ProjectLiteController extends Controller
         $baseUrl = config('services.project_lite.url');
 
         // config設定漏れ対策
-        if (!$baseUrl) {
-             Log::critical('Project-Lite API URL is not configured in services.php');
-             return response()->json(['message' => 'Server Configuration Error'], 500);
+        if (! $baseUrl) {
+            Log::critical('Project-Lite API URL is not configured in services.php');
+
+            return response()->json(['message' => 'Server Configuration Error'], 500);
         }
 
         $apiUrl = "{$baseUrl}/api/external/boards/{$project->pl_board_id}/summary";
@@ -46,11 +47,11 @@ class ProjectLiteController extends Controller
                 Log::warning('Project-Lite API Error', [
                     'project_id' => $project->id,
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body' => $response->body(),
                 ]);
 
                 return response()->json(
-                    $response->json(), 
+                    $response->json(),
                     $response->status()
                 );
             }
@@ -62,7 +63,7 @@ class ProjectLiteController extends Controller
             // 例外発生時もログに残す
             Log::error('Project-Lite Connection Exception', [
                 'project_id' => $project->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json(['message' => 'Connection error occurred'], 500);

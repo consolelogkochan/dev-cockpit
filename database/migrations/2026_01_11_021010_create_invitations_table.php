@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('invitations', function (Blueprint $table) {
             $table->id();
             $table->string('code')->unique()->comment('招待コード');
-            
+
             // 誰が発行したか (usersテーブルのidと紐付け)
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
-            
+
             $table->boolean('is_used')->default(false)->comment('使用済みフラグ');
             $table->timestamp('expires_at')->nullable()->comment('有効期限');
             $table->timestamps();

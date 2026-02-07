@@ -1,0 +1,11 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+
+    # レベルは 0(ゆるい) 〜 9(厳しい)。まずは 5 でいきます。
+    level: 5
+
+    

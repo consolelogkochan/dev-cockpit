@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('role')->default('user')->comment('権限: admin/user');
             $table->boolean('is_active')->default(false)->comment('有効アカウントフラグ');
             // ▲ ここまで
-            
+
             $table->rememberToken();
             $table->timestamps();
         });

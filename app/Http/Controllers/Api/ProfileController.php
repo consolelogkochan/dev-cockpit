@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Traits\UploadsImages; // ★前回のTraitを使用
+use App\Models\User; // ★前回のTraitを使用
+use App\Notifications\EmailChangeNotification;
+use App\Traits\UploadsImages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Notification; // ★追加
-use App\Notifications\EmailChangeNotification; // ★追加
-use App\Models\User; // ★Verify用に追加
+use Illuminate\Support\Str; // ★追加
+use Illuminate\Validation\Rule; // ★Verify用に追加
 
 class ProfileController extends Controller
 {
@@ -57,22 +57,22 @@ class ProfileController extends Controller
 
         // ★★★ 4. メールアドレス変更ロジック ★★★
         $emailChanged = false;
-        
+
         // 入力されたメアドが現在のメアドと異なる場合
         if ($validated['email'] !== $user->email) {
-            
+
             // トークン生成
             $token = Str::random(60);
-            
+
             // 一時カラムに保存（メインのemailはまだ更新しない）
             $user->new_email = $validated['email'];
             $user->email_change_token = $token;
-            
+
             // ★重要: 通知は「新しいメールアドレス」宛に送る
             // $userインスタンス宛だと古いメアドに飛んでしまうため、Notification::routeを使う
             Notification::route('mail', $validated['email'])
                 ->notify(new EmailChangeNotification($token));
-            
+
             $emailChanged = true;
         }
 
@@ -87,7 +87,7 @@ class ProfileController extends Controller
         return response()->json([
             'message' => $message,
             'user' => $user,
-            'email_changed' => $emailChanged // フロント制御用フラグ
+            'email_changed' => $emailChanged, // フロント制御用フラグ
         ]);
     }
 
@@ -101,7 +101,7 @@ class ProfileController extends Controller
         // トークンが一致するユーザーを探す
         $user = User::where('email_change_token', $request->token)->first();
 
-        if (!$user || !$user->new_email) {
+        if (! $user || ! $user->new_email) {
             return response()->json(['message' => '無効なトークンまたは期限切れです。'], 400);
         }
 

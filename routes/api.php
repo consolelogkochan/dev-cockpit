@@ -1,12 +1,12 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Admin\InvitationController;
+use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectLiteController;
-use App\Http\Controllers\Api\Admin\UserController;
-use App\Http\Controllers\Api\Admin\InvitationController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 // 認証不要なルートに追加
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -28,7 +28,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // ★ログアウトはここ！ (ログイン中の人しかログアウトできないため)
     Route::post('/auth/logout', [AuthController::class, 'logout']);
-    
+
     // 自分の情報を取得 (Controllerを使わず、ここで直接返すのが一番シンプルです)
     Route::get('/user', function (Request $request) {
         return $request->user();
@@ -79,7 +79,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 */
 // ログイン済み(auth:sanctum) かつ 管理者(admin) の場合のみアクセス可能
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
-    
+
     // 動作確認用: 管理者チェックAPI
     Route::get('/check', function () {
         return response()->json(['message' => 'あなたは管理者です。']);

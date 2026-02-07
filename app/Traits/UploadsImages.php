@@ -10,9 +10,8 @@ trait UploadsImages
     /**
      * 画像をアップロードして、公開パスを返す
      *
-     * @param Request $request
-     * @param string $key リクエストのキー名 (例: 'thumbnail_file')
-     * @param string $folder 保存先フォルダ (例: 'projects')
+     * @param  string  $key  リクエストのキー名 (例: 'thumbnail_file')
+     * @param  string  $folder  保存先フォルダ (例: 'projects')
      * @return string|null 保存されたパス (例: '/storage/projects/xxx.jpg') または null
      */
     public function uploadImage(Request $request, string $key, string $folder = 'images')
@@ -23,7 +22,7 @@ trait UploadsImages
             $path = $request->file($key)->store($folder, 'public');
 
             // Webからアクセス可能なURLパスを返す (/storage/...)
-            return '/storage/' . $path;
+            return '/storage/'.$path;
         }
 
         return null;
@@ -32,11 +31,13 @@ trait UploadsImages
     /**
      * 古い画像を削除する (更新時用)
      *
-     * @param string|null $path DBに保存されているパス
+     * @param  string|null  $path  DBに保存されているパス
      */
     public function deleteImage(?string $path)
     {
-        if (!$path) return;
+        if (! $path) {
+            return;
+        }
 
         // パスから '/storage/' を取り除いて、実際のファイルパスにする
         $relativePath = str_replace('/storage/', '', $path);
